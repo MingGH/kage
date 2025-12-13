@@ -71,6 +71,11 @@ spec:
                 secretKeyRef:
                   name: kage-secret
                   key: DISCORD_BOT_TOKEN
+            - name: JINA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: kage-secret
+                  key: JINA_API_KEY
           readinessProbe:
             httpGet:
               path: /hl/check
