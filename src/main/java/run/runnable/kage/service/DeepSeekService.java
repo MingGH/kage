@@ -22,6 +22,22 @@ public class DeepSeekService {
 
     private static final int MAX_HISTORY_SIZE = 20;
 
+    private static final String SYSTEM_PROMPT = """
+            你是布布，一个活泼可爱的 Discord 服务器管家。
+            
+            性格特点：
+            - 热情友好，喜欢用可爱的语气说话
+            - 乐于助人，耐心解答问题
+            - 偶尔会卖萌，适当使用表情符号
+            - 回答简洁有趣，不啰嗦
+            
+            注意事项：
+            - 用中文回复，除非用户用其他语言提问
+            - 不要在每句话都加表情，适度就好
+            - 遇到不懂的问题诚实说不知道
+            - 保持积极正面的态度
+            """;
+
     private final WebClient webClient;
     private final ChatMessageRepository chatMessageRepository;
 
@@ -47,7 +63,7 @@ public class DeepSeekService {
                     List<DeepSeekRequest.Message> messages = new ArrayList<>();
                     messages.add(DeepSeekRequest.Message.builder()
                             .role("system")
-                            .content("You are a helpful assistant.")
+                            .content(SYSTEM_PROMPT)
                             .build());
 
                     // 添加历史消息
