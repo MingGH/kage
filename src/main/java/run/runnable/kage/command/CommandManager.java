@@ -11,19 +11,22 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
- * 命令管理器 - 负责注册和分发命令
+ * 命令管理器 - 负责注册和分发 @机器人 命令
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class CommandManager {
 
-    private static final String COMMAND_PREFIX = "!";
     private static final String EVENT_KEY_PREFIX = "discord:event:";
     private static final Duration EVENT_EXPIRE = Duration.ofMinutes(5);
+    private static final String DEFAULT_HINT = "你好呀～我是布布！\n\n" +
+            "你可以用以下方式和我互动：\n" +
+            "• `@布布 ask 问题` - 向我提问\n" +
+            "• `@布布 help` - 查看所有命令\n" +
+            "• 或者使用斜杠命令 `/help`";
 
     private final List<Command> commands;
     private final ReactiveStringRedisTemplate redisTemplate;
@@ -38,44 +41,53 @@ public class CommandManager {
     }
 
     /**
-     * 处理消息，如果是命令则执行
+     * 处理 @机器人 消息
      * 使用 Redis 防止重复处理（本地开发和线上同时运行时）
      */
     public void handleMessage(MessageReceivedEvent event) {
-        String content = event.getMessage().getContentRaw();
-
-        if (!content.startsWith(COMMAND_PREFIX)) {
+        // 只处理 @机器人 的消息
+        if (!event.getMessage().getMentions().isMentioned(event.getJDA().getSelfUser())) {
             return;
         }
 
-        String[] parts = content.substring(COMMAND_PREFIX.length()).split("\\s+");
-        if (parts.length == 0 || parts[0].isEmpty()) {
-            return;
-        }
-
-        String commandName = parts[0].toLowerCase();
-        Command cmd = commandMap.get(commandName);
+        String content = event.getMessage().getContentRaw().trim();
+        // 移除 @机器人 部分
+        String commandContent = content.replaceFirst("<@!?" + event.getJDA().getSelfUser().getId() + ">\\s*", "").trim();
 
         // 用消息 ID 作为去重 key
         String eventKey = EVENT_KEY_PREFIX + event.getMessageId();
 
-        // setIfAbsent 返回 true 表示设置成功（第一个处理的实例）
         redisTemplate.opsForValue()
                 .setIfAbsent(eventKey, "1", EVENT_EXPIRE)
                 .subscribe(success -> {
                     if (Boolean.TRUE.equals(success)) {
-                        if (cmd == null) {
-                            event.getChannel().sendMessage("布布不明白你的意思呢～").queue();
-                            return;
-                        }
-                        String[] args = new String[parts.length - 1];
-                        System.arraycopy(parts, 1, args, 0, args.length);
-                        log.info("执行命令: {} by {}", commandName, event.getAuthor().getName());
-                        cmd.execute(event, args);
+                        executeCommand(event, commandContent);
                     } else {
                         log.debug("事件已被其他实例处理: {}", event.getMessageId());
                     }
                 });
+    }
+
+    private void executeCommand(MessageReceivedEvent event, String commandContent) {
+        // 如果 @机器人 后面没有内容，显示默认提示
+        if (commandContent.isBlank()) {
+            event.getChannel().sendMessage(DEFAULT_HINT).queue();
+            return;
+        }
+
+        String[] parts = commandContent.split("\\s+");
+        String commandName = parts[0].toLowerCase();
+        Command cmd = commandMap.get(commandName);
+
+        if (cmd == null) {
+            event.getChannel().sendMessage("布布不明白你的意思呢～\n输入 `@布布 help` 查看可用命令").queue();
+            return;
+        }
+
+        String[] args = new String[parts.length - 1];
+        System.arraycopy(parts, 1, args, 0, args.length);
+        log.info("执行命令: {} by {}", commandName, event.getAuthor().getName());
+        cmd.execute(event, args);
     }
 
     public Map<String, Command> getCommands() {

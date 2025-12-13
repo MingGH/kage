@@ -19,5 +19,3 @@ CREATE INDEX idx_chat_message_guild_user ON chat_message(guild_id, user_id);
 CREATE INDEX idx_chat_message_created_at ON chat_message(created_at);
 CREATE INDEX idx_chat_message_active ON chat_message(guild_id, user_id, created_at DESC) WHERE deleted = FALSE;
 
--- 如果表已存在，用这个 ALTER 语句添加字段
--- ALTER TABLE chat_message ADD COLUMN guild_id VARCHAR(64) NOT NULL DEFAULT '';

@@ -1,11 +1,11 @@
 package run.runnable.kage.command.impl;
 
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.springframework.stereotype.Component;
-import run.runnable.kage.command.Command;
+import run.runnable.kage.command.CommandContext;
+import run.runnable.kage.command.UnifiedCommand;
 
 @Component
-public class HelloCommand implements Command {
+public class HelloCommand implements UnifiedCommand {
 
     @Override
     public String getName() {
@@ -18,8 +18,8 @@ public class HelloCommand implements Command {
     }
 
     @Override
-    public void execute(MessageReceivedEvent event, String[] args) {
-        String userName = event.getAuthor().getName();
-        event.getChannel().sendMessage("Hello " + userName + "! 👋").queue();
+    public void execute(CommandContext ctx) {
+        String userName = ctx.getUser().getName();
+        ctx.reply("Hello " + userName + "! 👋");
     }
 }

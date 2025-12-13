@@ -1,15 +1,16 @@
 package run.runnable.kage.command.impl;
 
 import lombok.RequiredArgsConstructor;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.springframework.stereotype.Component;
 import run.runnable.kage.command.Command;
+import run.runnable.kage.command.CommandContext;
+import run.runnable.kage.command.UnifiedCommand;
 
 import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class HelpCommand implements Command {
+public class HelpCommand implements UnifiedCommand {
 
     private final List<Command> commands;
 
@@ -24,14 +25,21 @@ public class HelpCommand implements Command {
     }
 
     @Override
-    public void execute(MessageReceivedEvent event, String[] args) {
-        StringBuilder sb = new StringBuilder("**Kage Bot 命令列表:**\n");
+    public void execute(CommandContext ctx) {
+        StringBuilder sb = new StringBuilder("**布布命令列表:**\n\n");
+        sb.append("**Slash 命令：**\n");
 
+        commands.forEach(cmd ->
+                sb.append("`/").append(cmd.getName()).append("` - ")
+                  .append(cmd.getDescription()).append("\n")
+        );
+
+        sb.append("\n**传统命令（@布布 或 !）：**\n");
         commands.forEach(cmd ->
                 sb.append("`!").append(cmd.getName()).append("` - ")
                   .append(cmd.getDescription()).append("\n")
         );
 
-        event.getChannel().sendMessage(sb.toString()).queue();
+        ctx.reply(sb.toString());
     }
 }

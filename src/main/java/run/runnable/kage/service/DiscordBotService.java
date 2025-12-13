@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import run.runnable.kage.config.DiscordConfig;
 import run.runnable.kage.listener.DiscordMessageListener;
 import run.runnable.kage.listener.LotteryButtonListener;
+import run.runnable.kage.listener.MemberJoinListener;
+import run.runnable.kage.listener.PollButtonListener;
 
 @Slf4j
 @Service
@@ -20,6 +22,9 @@ public class DiscordBotService implements CommandLineRunner {
     private final DiscordConfig discordConfig;
     private final DiscordMessageListener messageListener;
     private final LotteryButtonListener lotteryButtonListener;
+    private final MemberJoinListener memberJoinListener;
+    private final PollButtonListener pollButtonListener;
+    private final SlashCommandManager slashCommandManager;
     private JDA jda;
 
     @Override
@@ -37,13 +42,17 @@ public class DiscordBotService implements CommandLineRunner {
                     .enableIntents(
                             GatewayIntent.GUILD_MESSAGES,
                             GatewayIntent.MESSAGE_CONTENT,
-                            GatewayIntent.DIRECT_MESSAGES
+                            GatewayIntent.DIRECT_MESSAGES,
+                            GatewayIntent.GUILD_MEMBERS  // 需要开启才能监听成员加入事件
                     )
-                    .addEventListeners(messageListener, lotteryButtonListener)
+                    .addEventListeners(messageListener, lotteryButtonListener, memberJoinListener, pollButtonListener, slashCommandManager)
                     .build();
 
             jda.awaitReady();
             log.info("Discord bot started successfully! Bot is connected as: {}", jda.getSelfUser().getName());
+            
+            // 注册 Slash 命令
+            slashCommandManager.registerCommands(jda);
             
         } catch (Exception e) {
             log.error("Failed to start Discord bot", e);

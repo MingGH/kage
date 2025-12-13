@@ -1,14 +1,14 @@
 package run.runnable.kage.command.impl;
 
 import lombok.RequiredArgsConstructor;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.springframework.stereotype.Component;
-import run.runnable.kage.command.Command;
+import run.runnable.kage.command.CommandContext;
+import run.runnable.kage.command.UnifiedCommand;
 import run.runnable.kage.service.DeepSeekService;
 
 @Component
 @RequiredArgsConstructor
-public class ClearCommand implements Command {
+public class ClearCommand implements UnifiedCommand {
 
     private final DeepSeekService deepSeekService;
 
@@ -23,18 +23,19 @@ public class ClearCommand implements Command {
     }
 
     @Override
-    public void execute(MessageReceivedEvent event, String[] args) {
-        if (!event.isFromGuild()) {
-            event.getChannel().sendMessage("❌ 该命令只能在服务器中使用").queue();
+    public void execute(CommandContext ctx) {
+        if (!ctx.isFromGuild()) {
+            ctx.replyEphemeral("❌ 该命令只能在服务器中使用");
             return;
         }
 
-        String guildId = event.getGuild().getId();
-        String userId = event.getAuthor().getId();
+        String guildId = ctx.getGuild().getId();
+        String userId = ctx.getUser().getId();
+
         deepSeekService.clearHistory(guildId, userId)
                 .subscribe(
-                        v -> event.getChannel().sendMessage("✨ 对话历史已清除，可以开始新话题了").queue(),
-                        e -> event.getChannel().sendMessage("❌ 清除失败: " + e.getMessage()).queue()
+                        v -> ctx.reply("✨ 对话历史已清除，可以开始新话题了"),
+                        e -> ctx.reply("❌ 清除失败: " + e.getMessage())
                 );
     }
 }

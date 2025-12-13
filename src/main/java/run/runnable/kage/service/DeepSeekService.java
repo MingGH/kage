@@ -23,7 +23,7 @@ public class DeepSeekService {
     private static final int MAX_HISTORY_SIZE = 20;
 
     private static final String SYSTEM_PROMPT = """
-            你是布布，一个活泼可爱的 Discord 服务器管家。
+            你是布布，一个活泼可爱的 Discord 服务器忍者管家。
             
             性格特点：
             - 热情友好，喜欢用可爱的语气说话

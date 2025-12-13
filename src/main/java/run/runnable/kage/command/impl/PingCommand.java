@@ -1,11 +1,11 @@
 package run.runnable.kage.command.impl;
 
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.springframework.stereotype.Component;
-import run.runnable.kage.command.Command;
+import run.runnable.kage.command.CommandContext;
+import run.runnable.kage.command.UnifiedCommand;
 
 @Component
-public class PingCommand implements Command {
+public class PingCommand implements UnifiedCommand {
 
     @Override
     public String getName() {
@@ -18,7 +18,7 @@ public class PingCommand implements Command {
     }
 
     @Override
-    public void execute(MessageReceivedEvent event, String[] args) {
-        event.getChannel().sendMessage("Pong! 🏓").queue();
+    public void execute(CommandContext ctx) {
+        ctx.reply("Pong! 🏓");
     }
 }
