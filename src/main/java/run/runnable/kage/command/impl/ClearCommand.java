@@ -32,10 +32,12 @@ public class ClearCommand implements UnifiedCommand {
         String guildId = ctx.getGuild().getId();
         String userId = ctx.getUser().getId();
 
-        deepSeekService.clearHistory(guildId, userId)
-                .subscribe(
-                        v -> ctx.reply("✨ 对话历史已清除，可以开始新话题了"),
-                        e -> ctx.reply("❌ 清除失败: " + e.getMessage())
-                );
+        // 使用 deferReply 避免 3 秒超时
+        ctx.deferReply(hook -> {
+            deepSeekService.clearHistory(guildId, userId)
+                    .doOnSuccess(v -> hook.sendMessage("✨ 对话历史已清除，可以开始新话题了"))
+                    .doOnError(e -> hook.sendMessage("❌ 清除失败: " + e.getMessage()))
+                    .subscribe();
+        });
     }
 }

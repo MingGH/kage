@@ -1,19 +1,17 @@
 package run.runnable.kage.command;
 
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.stereotype.Component;
+import run.runnable.kage.service.DeepSeekService;
 
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
- * 命令管理器 - 负责注册和分发 @机器人 命令
+ * 命令管理器 - 负责分发 @机器人 命令
  */
 @Slf4j
 @Component
@@ -22,23 +20,10 @@ public class CommandManager {
 
     private static final String EVENT_KEY_PREFIX = "discord:event:";
     private static final Duration EVENT_EXPIRE = Duration.ofMinutes(5);
-    private static final String DEFAULT_HINT = "你好呀～我是布布！\n\n" +
-            "你可以用以下方式和我互动：\n" +
-            "• `@布布 ask 问题` - 向我提问\n" +
-            "• `@布布 help` - 查看所有命令\n" +
-            "• 或者使用斜杠命令 `/help`";
 
-    private final List<Command> commands;
+    private final CommandRegistry commandRegistry;
     private final ReactiveStringRedisTemplate redisTemplate;
-    private final Map<String, Command> commandMap = new HashMap<>();
-
-    @PostConstruct
-    public void init() {
-        for (Command command : commands) {
-            commandMap.put(command.getName().toLowerCase(), command);
-            log.info("注册命令: {}", command.getName());
-        }
-    }
+    private final DeepSeekService deepSeekService;
 
     /**
      * 处理 @机器人 消息
@@ -69,18 +54,19 @@ public class CommandManager {
     }
 
     private void executeCommand(MessageReceivedEvent event, String commandContent) {
-        // 如果 @机器人 后面没有内容，显示默认提示
+        // 如果 @机器人 后面没有内容，当作打招呼
         if (commandContent.isBlank()) {
-            event.getChannel().sendMessage(DEFAULT_HINT).queue();
+            chatWithAI(event, "你好");
             return;
         }
 
         String[] parts = commandContent.split("\\s+");
         String commandName = parts[0].toLowerCase();
-        Command cmd = commandMap.get(commandName);
+        Command cmd = commandRegistry.getCommand(commandName);
 
+        // 如果没有匹配到命令，直接当作 AI 对话
         if (cmd == null) {
-            event.getChannel().sendMessage("布布不明白你的意思呢～\n输入 `@布布 help` 查看可用命令").queue();
+            chatWithAI(event, commandContent);
             return;
         }
 
@@ -90,7 +76,37 @@ public class CommandManager {
         cmd.execute(event, args);
     }
 
+    /**
+     * 调用 DeepSeek AI 进行对话
+     */
+    private void chatWithAI(MessageReceivedEvent event, String message) {
+        if (!event.isFromGuild()) {
+            event.getChannel().sendMessage("❌ 该功能只能在服务器中使用").queue();
+            return;
+        }
+
+        String guildId = event.getGuild().getId();
+        String userId = event.getAuthor().getId();
+
+        event.getChannel().sendMessage("🤔 思考中...").queue(thinkingMsg -> {
+            deepSeekService.chat(guildId, userId, message)
+                    .subscribe(
+                            answer -> {
+                                thinkingMsg.delete().queue();
+                                String reply = answer.length() > 1900
+                                        ? answer.substring(0, 1900) + "..."
+                                        : answer;
+                                event.getChannel().sendMessage(reply).queue();
+                            },
+                            error -> {
+                                thinkingMsg.delete().queue();
+                                event.getChannel().sendMessage("❌ 出错了: " + error.getMessage()).queue();
+                            }
+                    );
+        });
+    }
+
     public Map<String, Command> getCommands() {
-        return commandMap;
+        return commandRegistry.getCommandMap();
     }
 }

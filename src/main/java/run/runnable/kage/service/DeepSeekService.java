@@ -1,11 +1,12 @@
 package run.runnable.kage.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import run.runnable.kage.command.CommandRegistry;
 import run.runnable.kage.domain.ChatMessage;
 import run.runnable.kage.dto.deepseek.DeepSeekRequest;
 import run.runnable.kage.dto.deepseek.DeepSeekResponse;
@@ -22,8 +23,8 @@ public class DeepSeekService {
 
     private static final int MAX_HISTORY_SIZE = 20;
 
-    private static final String SYSTEM_PROMPT = """
-            你是布布，一个活泼可爱的 Discord 服务器忍者管家。
+    private static final String SYSTEM_PROMPT_TEMPLATE = """
+            你是布布，一个活泼可爱的 Discord 服务器忍者女管家。
             
             性格特点：
             - 热情友好，喜欢用可爱的语气说话
@@ -31,24 +32,39 @@ public class DeepSeekService {
             - 偶尔会卖萌，适当使用表情符号
             - 回答简洁有趣，不啰嗦
             
+            重要：你可以记住对话历史！上面的消息就是你和用户之前的对话记录，请根据这些上下文来回答问题。
+            
+            你的能力：
+            用户可以通过 @布布 或斜杠命令 / 来使用以下功能：
+            %s
+            
             注意事项：
             - 用中文回复，除非用户用其他语言提问
             - 不要在每句话都加表情，适度就好
             - 遇到不懂的问题诚实说不知道
             - 保持积极正面的态度
+            - 当用户询问你能做什么或有哪些命令时，介绍上面列出的功能
+            - 直接 @布布 说话也可以和你聊天，不需要特定命令
             """;
 
     private final WebClient webClient;
     private final ChatMessageRepository chatMessageRepository;
+    private final CommandRegistry commandRegistry;
 
     public DeepSeekService(@Value("${deepseek.apiKeys}") String apiKey,
-                           ChatMessageRepository chatMessageRepository) {
+                           ChatMessageRepository chatMessageRepository,
+                           @Lazy CommandRegistry commandRegistry) {
         this.chatMessageRepository = chatMessageRepository;
+        this.commandRegistry = commandRegistry;
         this.webClient = WebClient.builder()
                 .baseUrl("https://api.deepseek.com")
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .defaultHeader("Content-Type", "application/json")
                 .build();
+    }
+
+    private String getSystemPrompt() {
+        return String.format(SYSTEM_PROMPT_TEMPLATE, commandRegistry.getCommandListText());
     }
 
     public Mono<String> chat(String guildId, String userId, String userMessage) {
@@ -63,7 +79,7 @@ public class DeepSeekService {
                     List<DeepSeekRequest.Message> messages = new ArrayList<>();
                     messages.add(DeepSeekRequest.Message.builder()
                             .role("system")
-                            .content(SYSTEM_PROMPT)
+                            .content(getSystemPrompt())
                             .build());
 
                     // 添加历史消息

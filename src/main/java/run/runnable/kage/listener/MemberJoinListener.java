@@ -56,8 +56,8 @@ public class MemberJoinListener extends ListenerAdapter {
             String welcomeMsg = String.format("""
                     🎉 欢迎 %s 加入 **%s**！
                     
-                    希望你在这里玩得开心～ 有问题可以随时问我哦！
-                    输入 `!help` 查看我能做什么 😊
+                    希望你在这里玩得开心～ 有问题可以随时 @我 哦！
+                    输入 `/help` 或 `@布布 help` 查看我能做什么 😊
                     """, member.getAsMention(), guild.getName());
 
             channel.sendMessage(welcomeMsg).queue();
