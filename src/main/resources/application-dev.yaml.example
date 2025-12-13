@@ -1,0 +1,19 @@
+# 复制此文件为 application-dev.yaml 并填入你的配置
+spring:
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/kage-dev
+    username: your_username
+    password: your_password
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: your_redis_password
+      database: 0
+
+deepseek:
+  apiKeys: your_deepseek_api_key
+
+discord:
+  bot:
+    token: your_discord_bot_token

@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: kage
+  webflux:
+    multipart:
+      max-in-memory-size: 20MB
+  r2dbc:
+    url: ${DB_URL:r2dbc:postgresql://localhost:5432/kage}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 5000
+      database: ${REDIS_DATABASE:0}
+
+project:
+  version: @project.version@
+
+server:
+  port: ${SERVER_PORT:8080}
+
+deepseek:
+  apiKeys: ${DEEPSEEK_API_KEY:}
+
+discord:
+  bot:
+    token: ${DISCORD_BOT_TOKEN:}
+    activity: ${DISCORD_ACTIVITY:Kage Bot is running!}

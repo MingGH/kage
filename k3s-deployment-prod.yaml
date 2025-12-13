@@ -1,0 +1,118 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: 996ninja
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kage-deployment
+  namespace: 996ninja
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: kage
+  template:
+    metadata:
+      labels:
+        app: kage
+    spec:
+      containers:
+        - name: kage
+          image: registry.cn-hongkong.aliyuncs.com/runnable-run/kage:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: kage-secret
+                  key: DB_URL
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: kage-secret
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kage-secret
+                  key: DB_PASSWORD
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: kage-secret
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: kage-secret
+                  key: REDIS_PORT
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kage-secret
+                  key: REDIS_PASSWORD
+            - name: REDIS_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: kage-secret
+                  key: REDIS_DATABASE
+            - name: DEEPSEEK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: kage-secret
+                  key: DEEPSEEK_API_KEY
+            - name: DISCORD_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: kage-secret
+                  key: DISCORD_BOT_TOKEN
+          readinessProbe:
+            httpGet:
+              path: /hl/check
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 3
+            timeoutSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /hl/check
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 3
+            timeoutSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kage-service
+  namespace: 996ninja
+spec:
+  selector:
+    app: kage
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kage-ingress
+  namespace: 996ninja
+spec:
+  rules:
+    - host: kage.996.ninja
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kage-service
+                port:
+                  number: 80
