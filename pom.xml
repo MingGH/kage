@@ -34,7 +34,20 @@
         <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
         <docker.registry.publish.url>registry.cn-hongkong.aliyuncs.com</docker.registry.publish.url>
         <docker.namespace>runnable-run</docker.namespace>
+        <spring-ai.version>1.1.0</spring-ai.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
         <!-- Reactive Redis 支持 -->
         <dependency>
@@ -112,7 +125,45 @@
             <artifactId>JDA</artifactId>
             <version>5.1.2</version>
         </dependency>
+
+        <!-- Spring AI - OpenAI 兼容 (用于 DeepSeek) -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-openai</artifactId>
+            <version>${spring-ai.version}</version>
+        </dependency>
+
+        <!-- Spring AI MCP Client (WebFlux 版本，支持 SSE 传输) -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-client-webflux</artifactId>
+            <version>${spring-ai.version}</version>
+        </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>spring-releases</id>
+            <name>Spring Releases</name>
+            <url>https://repo.spring.io/release</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo1.maven.org/maven2</url>
+        </repository>
+    </repositories>
 
     <build>
         <plugins>

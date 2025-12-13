@@ -1,100 +1,172 @@
-# Kage Bot
+# Kage Bot (布布管家)
 
-一个功能丰富的 Discord 机器人，基于 Spring Boot WebFlux 构建。
+A feature-rich Discord bot built with Spring Boot WebFlux, featuring AI conversations and web search capabilities.
 
-## 功能特性
+[中文文档](README_CN.md)
 
-- 🤖 **AI 对话** - 集成 DeepSeek API，支持多轮对话上下文
-- 🎁 **抽奖系统** - 发起抽奖、用户参与、自动开奖
-- 📝 **消息记录** - 记录服务器消息，支持数据分析
-- 🔧 **可扩展命令系统** - 轻松添加新命令
+## 🎯 Try It Out
 
-## 命令列表
+- **Add to your server**: [Install Kage Bot](https://discord.com/oauth2/authorize?client_id=1449365950947266670)
+- **Join our community**: [Discord Server](https://discord.gg/UAC8NMsF)
 
-| 命令 | 说明 |
-|------|------|
-| `!ping` | 测试机器人响应 |
-| `!hello` | 打招呼 |
-| `!help` | 显示帮助信息 |
-| `!ask <问题>` | 向 AI 提问 |
-| `!clear` | 清除 AI 对话历史 |
-| `!抽奖 <奖品> <人数> <分钟>` | 发起抽奖 |
+## 📖 Background
 
-## 技术栈
+I wanted to build a Chinese Discord bot that I could actually use. Mee6 is way too expensive, and with Claude by my side, I believe nothing is impossible. This project is the result of that vision.
+
+## 🆕 Recent Updates
+
+- **MCP Integration** - Added Jina MCP support for real-time web search and content reading
+- **Spring AI 1.1.0** - Upgraded to latest Spring AI with native MCP client support
+- **Multi-turn Conversations** - AI remembers conversation context per user per server
+- **Refactored Command System** - Clean command pattern architecture with easy extensibility
+
+## 🤝 Contributing
+
+PRs are welcome! Feel free to contribute new features, bug fixes, or improvements.
+
+## Features
+
+- 🤖 **AI Chat** - Powered by DeepSeek API with multi-turn conversation support
+- 🌐 **Web Search** - Integrated with Jina AI via MCP (Model Context Protocol) for real-time web search and content reading
+- 🎰 **Lottery System** - Create lotteries, user participation, automatic drawing
+- 📊 **Poll System** - Create polls with multiple options
+- 📝 **Message Logging** - Record server messages for analytics
+- 🔧 **Extensible Command System** - Support for both traditional and slash commands
+
+## Commands
+
+### Slash Commands (Recommended)
+
+| Command | Description |
+|---------|-------------|
+| `/ask <question>` | Ask AI a question |
+| `/clear` | Clear AI conversation history |
+| `/lottery <prize> <winners> <minutes>` | Start a lottery |
+| `/poll <question> <option1> <option2> ...` | Create a poll |
+| `/ping` | Test bot response |
+| `/hello` | Say hello |
+| `/help` | Show help information |
+
+### @Mention Chat
+
+Simply @BuBu to chat with AI, with support for real-time web search.
+
+## Tech Stack
 
 - Java 17+
-- Spring Boot 3.x (WebFlux)
-- JDA (Java Discord API)
+- Spring Boot 3.5.x (WebFlux)
+- Spring AI 1.1.0
+- JDA 5.x (Java Discord API)
 - PostgreSQL (R2DBC)
 - Redis
-- DeepSeek API
+- DeepSeek API (OpenAI-compatible)
+- Jina MCP (Web Search)
 
-## 快速开始
+## Architecture
 
-### 1. 环境要求
+```
+┌─────────────────┐     ┌──────────────────┐
+│  Discord User   │────▶│  Discord Gateway │
+└─────────────────┘     └────────┬─────────┘
+                                 │
+                        ┌────────▼─────────┐
+                        │   Kage Bot       │
+                        │  (Spring Boot)   │
+                        └────────┬─────────┘
+                                 │
+        ┌────────────────────────┼────────────────────────┐
+        │                        │                        │
+┌───────▼───────┐       ┌───────▼───────┐       ┌───────▼───────┐
+│  DeepSeek AI  │       │   Jina MCP    │       │  PostgreSQL   │
+│   (Chat AI)   │       │ (Web Search)  │       │  (Database)   │
+└───────────────┘       └───────────────┘       └───────────────┘
+```
+
+## Quick Start
+
+### 1. Requirements
 
 - JDK 17+
 - PostgreSQL 14+
 - Redis 6+
 - Maven 3.8+
 
-### 2. 配置
+### 2. Configuration
 
-复制示例配置文件：
+Copy the example config file:
 
 ```bash
-cp .env.example .env
+cp src/main/resources/application-dev.yaml.example src/main/resources/application-dev.yaml
 ```
 
-编辑 `.env` 填入你的配置：
+Edit the configuration:
 
-```env
-DB_URL=r2dbc:postgresql://localhost:5432/kage
-DB_USERNAME=postgres
-DB_PASSWORD=your_password
+```yaml
+spring:
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/kage
+    username: postgres
+    password: your_password
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: your_redis_password
 
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=your_redis_password
+spring.ai:
+  openai:
+    api-key: "your_deepseek_api_key"
 
-DEEPSEEK_API_KEY=your_deepseek_api_key
+jina:
+  api-key: "your_jina_api_key"
 
-DISCORD_BOT_TOKEN=your_discord_bot_token
+discord:
+  bot:
+    token: "your_discord_bot_token"
 ```
 
-### 3. 初始化数据库
+### 3. Get API Keys
 
-执行 `sql/` 目录下的 SQL 文件：
+- **DeepSeek API Key**: [DeepSeek Platform](https://platform.deepseek.com/)
+- **Jina API Key**: [Jina AI](https://jina.ai/) (for web search)
+- **Discord Bot Token**: [Discord Developer Portal](https://discord.com/developers/applications)
+
+### 4. Initialize Database
 
 ```bash
 psql -U postgres -d kage -f sql/chat_message.sql
 psql -U postgres -d kage -f sql/user_message.sql
 psql -U postgres -d kage -f sql/lottery.sql
+psql -U postgres -d kage -f sql/poll.sql
 ```
 
-### 4. 运行
+### 5. Run
 
 ```bash
-# 使用 Maven
-./mvnw spring-boot:run
+# Development
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 
-# 或者打包后运行
-./mvnw package
+# Production
+./mvnw package -DskipTests
 java -jar target/kage-*.jar
 ```
 
-## Discord Bot 配置
+## MCP Tools
 
-1. 前往 [Discord Developer Portal](https://discord.com/developers/applications)
-2. 创建新应用，获取 Bot Token
-3. 开启以下 Intents：
-   - MESSAGE CONTENT INTENT
-   - SERVER MEMBERS INTENT
-4. 生成邀请链接，添加 Bot 到你的服务器
+AI can use the following tools via Jina MCP integration:
 
-## 添加新命令
+| Tool | Description |
+|------|-------------|
+| `search_web` | Search web content |
+| `read_url` | Read webpage/PDF content |
+| `search_arxiv` | Search academic papers (arXiv) |
+| `search_ssrn` | Search social science papers (SSRN) |
+| `search_images` | Search images |
+| `capture_screenshot_url` | Capture webpage screenshot |
 
-实现 `Command` 接口并添加 `@Component` 注解：
+## Adding New Commands
+
+Implement the `Command` interface:
 
 ```java
 @Component
@@ -107,16 +179,31 @@ public class MyCommand implements Command {
 
     @Override
     public String getDescription() {
-        return "我的命令描述";
+        return "My command description";
     }
 
     @Override
-    public void execute(MessageReceivedEvent event, String[] args) {
-        event.getChannel().sendMessage("Hello!").queue();
+    public void execute(MessageCommandContext context) {
+        context.reply("Hello!");
     }
 }
 ```
 
+## Docker Deployment
+
+```bash
+# Build image
+./mvnw dockerfile:build
+
+# Run
+docker run -d \
+  -e DB_URL=r2dbc:postgresql://host:5432/kage \
+  -e DEEPSEEK_API_KEY=xxx \
+  -e JINA_API_KEY=xxx \
+  -e DISCORD_BOT_TOKEN=xxx \
+  kage:latest
+```
+
 ## License
 
-本项目采用自定义许可证，个人和非商业用途免费，商业用途需要获得授权。详见 [LICENSE](LICENSE) 文件。
+This project uses a custom license. Free for personal and non-commercial use. Commercial use requires authorization. See [LICENSE](LICENSE) for details.

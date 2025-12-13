@@ -13,7 +13,7 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
-      timeout: 5000
+      timeout: 15000
       database: ${REDIS_DATABASE:0}
 
 project:
@@ -22,8 +22,20 @@ project:
 server:
   port: ${SERVER_PORT:8080}
 
-deepseek:
-  apiKeys: ${DEEPSEEK_API_KEY:}
+# Spring AI 配置 (DeepSeek 使用 OpenAI 兼容接口)
+spring.ai:
+  openai:
+    base-url: https://api.deepseek.com
+    api-key: ${DEEPSEEK_API_KEY:}
+    chat:
+      options:
+        model: deepseek-chat
+  mcp:
+    client:
+      enabled: false  # 禁用自动配置，使用自定义配置
+
+jina:
+  api-key: ${JINA_API_KEY:}
 
 discord:
   bot:
@@ -31,8 +43,11 @@ discord:
     activity: ${DISCORD_ACTIVITY:Kage Bot is running!}
 
 
+# 日志配置 (调试时可开启)
 #logging:
 #  level:
+#    org.springframework.ai: DEBUG
+#    io.modelcontextprotocol: DEBUG
 #    org.springframework.r2dbc.core: DEBUG
 #    org.springframework.r2dbc.core.DefaultDatabaseClient: TRACE
 #    org.springframework.data.r2dbc: DEBUG

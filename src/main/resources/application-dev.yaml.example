@@ -11,8 +11,10 @@ spring:
       password: your_redis_password
       database: 0
 
-deepseek:
-  apiKeys: your_deepseek_api_key
+# Spring AI 配置
+spring.ai:
+  openai:
+    api-key: your_deepseek_api_key
 
 discord:
   bot:

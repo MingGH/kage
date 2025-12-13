@@ -1,15 +1,22 @@
 package run.runnable.kage.service;
 
+import io.modelcontextprotocol.client.McpAsyncClient;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.SystemMessage;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.mcp.AsyncMcpToolCallback;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import run.runnable.kage.command.CommandRegistry;
 import run.runnable.kage.domain.ChatMessage;
-import run.runnable.kage.dto.deepseek.DeepSeekRequest;
-import run.runnable.kage.dto.deepseek.DeepSeekResponse;
 import run.runnable.kage.repository.ChatMessageRepository;
 
 import java.time.LocalDateTime;
@@ -24,7 +31,7 @@ public class DeepSeekService {
     private static final int MAX_HISTORY_SIZE = 20;
 
     private static final String SYSTEM_PROMPT_TEMPLATE = """
-            你是布布，一个活泼可爱的 Discord 服务器忍者女管家。
+            你是布布，一个活泼可爱的 Discord 服务器忍者管家。
             
             性格特点：
             - 热情友好，喜欢用可爱的语气说话
@@ -38,6 +45,9 @@ public class DeepSeekService {
             用户可以通过 @布布 或斜杠命令 / 来使用以下功能：
             %s
             
+            你还可以使用以下工具来帮助用户：
+            - 网页搜索和阅读：当用户询问需要联网查询的信息时，可以使用工具搜索和读取网页内容
+            
             注意事项：
             - 用中文回复，除非用户用其他语言提问
             - 不要在每句话都加表情，适度就好
@@ -45,21 +55,39 @@ public class DeepSeekService {
             - 保持积极正面的态度
             - 当用户询问你能做什么或有哪些命令时，介绍上面列出的功能
             - 直接 @布布 说话也可以和你聊天，不需要特定命令
+            - 当需要查询实时信息时，主动使用工具获取
             """;
 
-    private final WebClient webClient;
+    private final ChatClient chatClient;
     private final ChatMessageRepository chatMessageRepository;
     private final CommandRegistry commandRegistry;
+    private final ToolCallback[] mcpTools;
 
-    public DeepSeekService(@Value("${deepseek.apiKeys}") String apiKey,
+    public DeepSeekService(ChatClient.Builder chatClientBuilder,
                            ChatMessageRepository chatMessageRepository,
-                           @Lazy CommandRegistry commandRegistry) {
+                           @Lazy CommandRegistry commandRegistry,
+                           @Lazy McpAsyncClient mcpAsyncClient) {
         this.chatMessageRepository = chatMessageRepository;
         this.commandRegistry = commandRegistry;
-        this.webClient = WebClient.builder()
-                .baseUrl("https://api.deepseek.com")
-                .defaultHeader("Authorization", "Bearer " + apiKey)
-                .defaultHeader("Content-Type", "application/json")
+        
+        // 从自定义 MCP Client 获取工具
+        var tools = mcpAsyncClient.listTools().block();
+        if (tools != null && tools.tools() != null) {
+            this.mcpTools = tools.tools().stream()
+                    .map(tool -> new AsyncMcpToolCallback(mcpAsyncClient, tool))
+                    .toArray(ToolCallback[]::new);
+            log.info("已加载 {} 个 MCP 工具", mcpTools.length);
+            for (ToolCallback tool : mcpTools) {
+                log.info("  - {}: {}", tool.getToolDefinition().name(), tool.getToolDefinition().description());
+            }
+        } else {
+            this.mcpTools = new ToolCallback[0];
+            log.warn("未能加载 MCP 工具");
+        }
+        
+        // 构建带工具的 ChatClient
+        this.chatClient = chatClientBuilder
+                .defaultToolCallbacks(mcpTools)
                 .build();
     }
 
@@ -67,88 +95,106 @@ public class DeepSeekService {
         return String.format(SYSTEM_PROMPT_TEMPLATE, commandRegistry.getCommandListText());
     }
 
+    /**
+     * 与 AI 进行对话
+     */
     public Mono<String> chat(String guildId, String userId, String userMessage) {
-        // 先查历史，再请求 AI，最后异步保存
-        return chatMessageRepository.findRecentByGuildAndUser(guildId, userId, MAX_HISTORY_SIZE)
-                .collectList()
-                .flatMap(history -> {
-                    // 反转列表（数据库查询是 DESC，需要变成时间升序）
-                    Collections.reverse(history);
-
-                    // 构建请求消息
-                    List<DeepSeekRequest.Message> messages = new ArrayList<>();
-                    messages.add(DeepSeekRequest.Message.builder()
-                            .role("system")
-                            .content(getSystemPrompt())
-                            .build());
-
-                    // 添加历史消息
-                    history.forEach(msg -> messages.add(DeepSeekRequest.Message.builder()
-                            .role(msg.getRole())
-                            .content(msg.getContent())
-                            .build()));
-
-                    // 添加当前用户消息
-                    messages.add(DeepSeekRequest.Message.builder()
-                            .role("user")
-                            .content(userMessage)
-                            .build());
-
-                    DeepSeekRequest request = DeepSeekRequest.builder()
-                            .model("deepseek-chat")
-                            .stream(false)
-                            .messages(messages)
-                            .build();
-
-                    return webClient.post()
-                            .uri("/chat/completions")
-                            .bodyValue(request)
-                            .retrieve()
-                            .bodyToMono(DeepSeekResponse.class);
-                })
-                .flatMap(response -> {
-                    if (response.getChoices() != null && !response.getChoices().isEmpty()) {
-                        String content = response.getChoices().get(0).getMessage().getContent();
-
-                        // 异步保存用户消息和 AI 回复，不阻塞返回
-                        LocalDateTime now = LocalDateTime.now();
-                        ChatMessage userMsg = ChatMessage.builder()
-                                .guildId(guildId)
-                                .userId(userId)
-                                .role("user")
-                                .content(userMessage)
-                                .deleted(false)
-                                .createdAt(now)
-                                .build();
-                        ChatMessage assistantMsg = ChatMessage.builder()
-                                .guildId(guildId)
-                                .userId(userId)
-                                .role("assistant")
-                                .content(content)
-                                .deleted(false)
-                                .createdAt(now.plusNanos(1000)) // 确保顺序
-                                .build();
-
-                        // 异步保存，不等待结果
-                        chatMessageRepository.save(userMsg)
-                                .then(chatMessageRepository.save(assistantMsg))
-                                .subscribe(
-                                        v -> {},
-                                        e -> log.error("保存对话历史失败: {}", e.getMessage())
-                                );
-
-                        return Mono.just(content);
-                    }
-                    return Mono.just("No response from AI");
-                })
-                .doOnError(e -> log.error("DeepSeek API error: {}", e.getMessage()))
+        return loadChatHistory(guildId, userId)
+                .flatMap(history -> callAi(history, userMessage))
+                .flatMap(content -> saveAndReturn(guildId, userId, userMessage, content))
+                .doOnError(e -> log.error("AI 调用失败: {}", e.getMessage()))
                 .onErrorReturn("AI 服务暂时不可用，请稍后再试");
     }
 
     /**
-     * 清除用户在指定服务器的对话历史（软删除）
+     * 加载对话历史
      */
+    private Mono<List<ChatMessage>> loadChatHistory(String guildId, String userId) {
+        return chatMessageRepository.findRecentByGuildAndUser(guildId, userId, MAX_HISTORY_SIZE)
+                .collectList()
+                .map(history -> {
+                    Collections.reverse(history);
+                    return history;
+                });
+    }
+
+    /**
+     * 构建消息列表并调用 AI
+     */
+    private Mono<String> callAi(List<ChatMessage> history, String userMessage) {
+        List<Message> messages = buildMessages(history, userMessage);
+        
+        return Mono.fromCallable(() -> {
+            log.info("开始调用 AI，消息数: {}, 可用工具数: {}", messages.size(), mcpTools.length);
+            Prompt prompt = new Prompt(messages);
+            var response = chatClient.prompt(prompt).call();
+            String content = response.content();
+            log.info("AI 响应完成，内容长度: {}", content != null ? content.length() : 0);
+            return content;
+        }).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    /**
+     * 构建 Spring AI 消息列表
+     */
+    private List<Message> buildMessages(List<ChatMessage> history, String userMessage) {
+        List<Message> messages = new ArrayList<>();
+        messages.add(new SystemMessage(getSystemPrompt()));
+
+        history.forEach(msg -> {
+            if ("user".equals(msg.getRole())) {
+                messages.add(new UserMessage(msg.getContent()));
+            } else if ("assistant".equals(msg.getRole())) {
+                messages.add(new AssistantMessage(msg.getContent()));
+            }
+        });
+
+        messages.add(new UserMessage(userMessage));
+        return messages;
+    }
+
+    /**
+     * 保存对话历史并返回响应
+     */
+    private Mono<String> saveAndReturn(String guildId, String userId, String userMessage, String content) {
+        saveChatHistory(guildId, userId, userMessage, content);
+        return Mono.just(content);
+    }
+
+    /**
+     * 异步保存对话历史
+     */
+    private void saveChatHistory(String guildId, String userId, String userMessage, String assistantContent) {
+        LocalDateTime now = LocalDateTime.now();
+        
+        ChatMessage userMsg = ChatMessage.builder()
+                .guildId(guildId)
+                .userId(userId)
+                .role("user")
+                .content(userMessage)
+                .deleted(false)
+                .createdAt(now)
+                .build();
+        
+        ChatMessage assistantMsg = ChatMessage.builder()
+                .guildId(guildId)
+                .userId(userId)
+                .role("assistant")
+                .content(assistantContent)
+                .deleted(false)
+                .createdAt(now.plusNanos(1000))
+                .build();
+
+        chatMessageRepository.save(userMsg)
+                .then(chatMessageRepository.save(assistantMsg))
+                .subscribe(
+                        v -> {},
+                        e -> log.error("保存对话历史失败: {}", e.getMessage())
+                );
+    }
+
     public Mono<Void> clearHistory(String guildId, String userId) {
         return chatMessageRepository.softDeleteByGuildAndUser(guildId, userId);
     }
+
 }
