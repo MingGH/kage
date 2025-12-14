@@ -63,12 +63,6 @@ public class AskCommand implements UnifiedCommand {
         String channelId = ctx.getChannel().getId();
         String finalQuestion = question;
 
-        // 检查用户是否正在处理中
-        if (deepSeekService.isUserProcessing(guildId, userId)) {
-            ctx.replyEphemeral("⏳ 请等待上一个问题回复完成");
-            return;
-        }
-
         ctx.deferReply(hook -> {
             StringBuilder contentBuilder = new StringBuilder();
             AtomicReference<String> lastSentContent = new AtomicReference<>("");

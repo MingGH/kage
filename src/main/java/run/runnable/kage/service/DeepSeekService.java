@@ -145,21 +145,13 @@ public class DeepSeekService {
     }
 
     /**
-     * 检查用户是否正在处理中
+     * 尝试获取用户处理锁（响应式）
      */
-    public boolean isUserProcessing(String guildId, String userId) {
+    private Mono<Boolean> tryAcquireLock(String guildId, String userId) {
         String redisKey = PROCESSING_KEY_PREFIX + guildId + ":" + userId;
-        return Boolean.TRUE.equals(redisTemplate.hasKey(redisKey).block());
-    }
-    
-    /**
-     * 尝试获取用户处理锁
-     */
-    private boolean tryAcquireLock(String guildId, String userId) {
-        String redisKey = PROCESSING_KEY_PREFIX + guildId + ":" + userId;
-        return Boolean.TRUE.equals(
-            redisTemplate.opsForValue().setIfAbsent(redisKey, "1", PROCESSING_LOCK_TTL).block()
-        );
+        return redisTemplate.opsForValue()
+                .setIfAbsent(redisKey, "1", PROCESSING_LOCK_TTL)
+                .defaultIfEmpty(false);
     }
     
     /**
@@ -176,20 +168,23 @@ public class DeepSeekService {
      */
     public Flux<String> chatStream(String guildId, String userId, String channelId, String userMessage, 
                                     java.util.function.Consumer<String> onComplete) {
-        // 尝试获取分布式锁
-        if (!tryAcquireLock(guildId, userId)) {
-            return Flux.error(new UserBusyException("请等待上一个问题回复完成"));
-        }
-        
-        // 设置频道上下文，供工具使用
-        channelHistoryTool.setContext(guildId, userId, channelId);
-        
-        return loadChatHistory(guildId, userId)
-                .flatMapMany(history -> callAiStream(history, userMessage, guildId, userId, userMessage, onComplete))
-                .doOnError(e -> log.error("AI 流式调用失败: {}", e.getMessage()))
-                .doFinally(signal -> {
-                    releaseLock(guildId, userId);  // 释放分布式锁
-                    channelHistoryTool.clearContext(guildId, userId);  // 清理上下文
+        // 响应式获取分布式锁
+        return tryAcquireLock(guildId, userId)
+                .flatMapMany(acquired -> {
+                    if (!acquired) {
+                        return Flux.error(new UserBusyException("请等待上一个问题回复完成"));
+                    }
+                    
+                    // 设置频道上下文，供工具使用
+                    channelHistoryTool.setContext(guildId, userId, channelId);
+                    
+                    return loadChatHistory(guildId, userId)
+                            .flatMapMany(history -> callAiStream(history, userMessage, guildId, userId, userMessage, onComplete))
+                            .doOnError(e -> log.error("AI 流式调用失败: {}", e.getMessage()))
+                            .doFinally(signal -> {
+                                releaseLock(guildId, userId);  // 释放分布式锁
+                                channelHistoryTool.clearContext(guildId, userId);  // 清理上下文
+                            });
                 })
                 .onErrorResume(e -> {
                     if (e instanceof UserBusyException) {

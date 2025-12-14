@@ -118,12 +118,6 @@ public class CommandManager {
         String userId = event.getAuthor().getId();
         String channelId = event.getChannel().getId();
 
-        // 检查用户是否正在处理中
-        if (deepSeekService.isUserProcessing(guildId, userId)) {
-            event.getMessage().reply("⏳ 请等待上一个问题回复完成").queue();
-            return;
-        }
-
         // 先回复一条消息，后续流式更新
         event.getMessage().reply("🤔 思考中...").queue(replyMsg -> {
             StringBuilder contentBuilder = new StringBuilder();
