@@ -37,6 +37,16 @@ public class CountdownCommand implements UnifiedCommand {
     }
 
     @Override
+    public void execute(MessageReceivedEvent event, String[] args) {
+        MessageCommandContext ctx = new MessageCommandContext(event, args);
+        // 传统命令：第一个参数是时间
+        if (args.length > 0) {
+            ctx.setArg("time", args[0]);
+        }
+        execute(ctx);
+    }
+
+    @Override
     public void execute(CommandContext ctx) {
         String time = ctx.getString("time");
         
