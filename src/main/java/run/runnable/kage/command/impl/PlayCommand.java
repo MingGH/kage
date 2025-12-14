@@ -99,7 +99,7 @@ public class PlayCommand implements UnifiedCommand {
     }
 
     private String parseInput(String input) {
-        //FIXME 如果是纯数字，当作网易云歌曲 ID 
+        //FIXME 如果是纯数字，当作网易云歌曲 ID
 //        if (input.matches("\\d+")) {
 //            return "https://music.163.com/song/media/outer/url?id=" + input + ".mp3";
 //        }

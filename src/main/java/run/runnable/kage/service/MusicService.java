@@ -7,6 +7,7 @@ import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import com.sedmelluq.discord.lavaplayer.track.playback.NonAllocatingAudioFrameBuffer;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.Guild;
@@ -32,6 +33,15 @@ public class MusicService {
     @PostConstruct
     public void init() {
         this.playerManager = new DefaultAudioPlayerManager();
+        
+        // 优化配置：增加缓冲区大小，减少卡顿
+        playerManager.getConfiguration().setFrameBufferFactory(
+                NonAllocatingAudioFrameBuffer::new
+        );
+        
+        // 设置缓冲时间（默认 5000ms，增加到 15 秒）
+        playerManager.setFrameBufferDuration(15000);
+        
         // 注册远程音源（HTTP、YouTube 等）
         AudioSourceManagers.registerRemoteSources(playerManager);
         // 注册本地音源
@@ -188,6 +198,48 @@ public class MusicService {
         if (manager != null) {
             manager.getPlayer().setVolume(Math.max(0, Math.min(100, volume)));
         }
+    }
+
+    /**
+     * 获取播放队列列表
+     */
+    public String getQueueList(Guild guild) {
+        GuildMusicManager manager = musicManagers.get(guild.getIdLong());
+        if (manager == null) {
+            return "❌ 当前没有播放任何音乐";
+        }
+
+        AudioTrack currentTrack = manager.getPlayer().getPlayingTrack();
+        var queue = manager.getScheduler().getQueue();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("📋 **播放队列**\n\n");
+
+        if (currentTrack != null) {
+            sb.append("▶️ **正在播放:** ").append(currentTrack.getInfo().title)
+              .append(" (").append(formatDuration(currentTrack.getPosition()))
+              .append("/").append(formatDuration(currentTrack.getDuration())).append(")\n\n");
+        } else {
+            sb.append("▶️ 当前没有播放\n\n");
+        }
+
+        if (queue.isEmpty()) {
+            sb.append("📭 队列为空");
+        } else {
+            sb.append("**接下来播放:**\n");
+            int index = 1;
+            for (AudioTrack track : queue) {
+                if (index > 10) {
+                    sb.append("... 还有 ").append(queue.size() - 10).append(" 首\n");
+                    break;
+                }
+                sb.append(index).append(". ").append(track.getInfo().title)
+                  .append(" (").append(formatDuration(track.getDuration())).append(")\n");
+                index++;
+            }
+        }
+
+        return sb.toString();
     }
 
     private String formatDuration(long millis) {

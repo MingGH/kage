@@ -17,6 +17,7 @@ public class AudioPlayerSendHandler implements AudioSendHandler {
 
     public AudioPlayerSendHandler(AudioPlayer audioPlayer) {
         this.audioPlayer = audioPlayer;
+        // JDA 需要有 backing array 的 ByteBuffer，不能用 allocateDirect
         this.buffer = ByteBuffer.allocate(1024);
         this.frame = new MutableAudioFrame();
         this.frame.setBuffer(buffer);
@@ -24,12 +25,15 @@ public class AudioPlayerSendHandler implements AudioSendHandler {
 
     @Override
     public boolean canProvide() {
+        // 每次提供前先清空 buffer
+        buffer.clear();
         return audioPlayer.provide(frame);
     }
 
     @Override
     public ByteBuffer provide20MsAudio() {
-        buffer.flip();
+        // flip 后返回，position=0, limit=数据长度
+        ((java.nio.Buffer) buffer).flip();
         return buffer;
     }
 
