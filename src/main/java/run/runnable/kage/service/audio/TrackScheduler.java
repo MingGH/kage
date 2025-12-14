@@ -4,6 +4,7 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -11,6 +12,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 /**
  * 音轨调度器，管理播放队列
  */
+@Slf4j
 public class TrackScheduler extends AudioEventAdapter {
 
     private final AudioPlayer player;
@@ -25,7 +27,9 @@ public class TrackScheduler extends AudioEventAdapter {
      * 添加音轨到队列，如果当前没有播放则立即播放
      */
     public void queue(AudioTrack track) {
-        if (!player.startTrack(track, true)) {
+        boolean started = player.startTrack(track, true);
+        log.info("尝试播放音轨: {}, 结果: {}", track.getInfo().title, started ? "开始播放" : "加入队列");
+        if (!started) {
             queue.offer(track);
         }
     }

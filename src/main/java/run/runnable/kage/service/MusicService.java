@@ -82,8 +82,8 @@ public class MusicService {
         AudioManager audioManager = guild.getAudioManager();
         audioManager.closeAudioConnection();
         
-        // 清理资源
-        GuildMusicManager manager = musicManagers.get(guild.getIdLong());
+        // 清理资源并移除 manager，下次会重新创建
+        GuildMusicManager manager = musicManagers.remove(guild.getIdLong());
         if (manager != null) {
             manager.getPlayer().stopTrack();
             manager.getScheduler().clearQueue();
