@@ -26,7 +26,7 @@ public class CountdownService {
 
     private static final String COUNTDOWN_KEY_PREFIX = "countdown:";
     private static final String SCHEDULE_LOCK_KEY = "kage:lock:countdown-remind";
-    private static final Duration SCHEDULE_LOCK_TTL = Duration.ofMinutes(5);
+    private static final Duration SCHEDULE_LOCK_TTL = Duration.ofMinutes(15);
     private static final ZoneId ZONE_ID = ZoneId.of("Asia/Shanghai");
     
     private final ReactiveStringRedisTemplate redisTemplate;
