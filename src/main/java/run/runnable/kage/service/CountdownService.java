@@ -25,6 +25,8 @@ import java.time.temporal.ChronoUnit;
 public class CountdownService {
 
     private static final String COUNTDOWN_KEY_PREFIX = "countdown:";
+    private static final String SCHEDULE_LOCK_KEY = "kage:lock:countdown-remind";
+    private static final Duration SCHEDULE_LOCK_TTL = Duration.ofMinutes(5);
     private static final ZoneId ZONE_ID = ZoneId.of("Asia/Shanghai");
     
     private final ReactiveStringRedisTemplate redisTemplate;
@@ -128,11 +130,22 @@ public class CountdownService {
      */
     @Scheduled(cron = "0 0,30 * * * *")  // 每小时的0分和30分执行
     public void remindCountdown() {
+        // 尝试获取分布式锁，确保多实例只有一个执行
+        Boolean acquired = redisTemplate.opsForValue()
+                .setIfAbsent(SCHEDULE_LOCK_KEY, "1", SCHEDULE_LOCK_TTL)
+                .block();
+        
+        if (!Boolean.TRUE.equals(acquired)) {
+            log.debug("其他实例正在执行下班倒计时提醒，跳过");
+            return;
+        }
+        
         log.info("开始执行下班倒计时提醒...");
         
         JDA jda = discordBotService.getJda();
         if (jda == null) {
             log.warn("JDA 未初始化，跳过提醒");
+            redisTemplate.delete(SCHEDULE_LOCK_KEY).subscribe();
             return;
         }
         
@@ -140,6 +153,7 @@ public class CountdownService {
         redisTemplate.keys(COUNTDOWN_KEY_PREFIX + "*")
                 .flatMap(key -> redisTemplate.opsForValue().get(key)
                         .map(value -> new String[]{key, value}))
+                .doFinally(signal -> redisTemplate.delete(SCHEDULE_LOCK_KEY).subscribe())
                 .subscribe(pair -> {
                     try {
                         String key = pair[0];
