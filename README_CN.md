@@ -20,6 +20,9 @@
 ### 基于 AI + Jina MCP 服务联网搜索
 ![](https://img.996.ninja/ninjutsu/878d2a48da82c83d00169148a87404d5.png)
 
+### 播放音乐
+![](https://img.996.ninja/ninjutsu/225e932f6c5ba8dde38dbfa0a0803fbf.png)
+
 ### 抽奖
 ![](https://img.996.ninja/ninjutsu/8f305fac4319af5244468abecf887f80.png)
 

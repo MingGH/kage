@@ -20,6 +20,9 @@ A feature-rich Discord bot built with Spring Boot WebFlux, featuring AI conversa
 ### AI + Jina MCP Web Search
 ![](https://img.996.ninja/ninjutsu/878d2a48da82c83d00169148a87404d5.png)
 
+### Play Music
+![](https://img.996.ninja/ninjutsu/225e932f6c5ba8dde38dbfa0a0803fbf.png)
+
 ### Lottery System
 ![](https://img.996.ninja/ninjutsu/8f305fac4319af5244468abecf887f80.png)
 
