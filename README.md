@@ -51,6 +51,7 @@ PRs are welcome! Feel free to contribute new features, bug fixes, or improvement
 - 🔮 **Daily Fortune** - Check your daily fortune and slacking index
 - 📝 **Message Logging** - Record server messages for analytics
 - 🔧 **Extensible Command System** - Support for both traditional and slash commands
+- 🚀 **Horizontal Scaling** - Redis-based event deduplication enables deployment across unlimited instances
 
 ## Commands
 
