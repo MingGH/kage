@@ -90,10 +90,17 @@ public class MessageCommandContext implements CommandContext {
 
     @Override
     public void deferReply(Consumer<ReplyHook> callback) {
-        event.getMessage().reply("🤔 处理中...").queue(msg -> {
-            callback.accept(response -> {
-                msg.delete().queue();
-                event.getMessage().reply(response).queue();
+        event.getMessage().reply("🤔 思考中...").queue(msg -> {
+            callback.accept(new ReplyHook() {
+                @Override
+                public void sendMessage(String response) {
+                    msg.editMessage(response).queue();
+                }
+                
+                @Override
+                public void editMessage(String response) {
+                    msg.editMessage(response).queue();
+                }
             });
         });
     }

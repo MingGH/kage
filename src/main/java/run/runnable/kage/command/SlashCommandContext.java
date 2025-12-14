@@ -75,7 +75,20 @@ public class SlashCommandContext implements CommandContext {
     @Override
     public void deferReply(Consumer<ReplyHook> callback) {
         event.deferReply().queue(hook -> {
-            callback.accept(response -> event.getHook().sendMessage(response).queue());
+            // 先发送一条初始消息
+            event.getHook().sendMessage("🤔 思考中...").queue(msg -> {
+                callback.accept(new ReplyHook() {
+                    @Override
+                    public void sendMessage(String response) {
+                        msg.editMessage(response).queue();
+                    }
+                    
+                    @Override
+                    public void editMessage(String response) {
+                        msg.editMessage(response).queue();
+                    }
+                });
+            });
         });
     }
 

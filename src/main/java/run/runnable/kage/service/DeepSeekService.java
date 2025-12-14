@@ -14,6 +14,7 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
@@ -122,6 +123,46 @@ public class DeepSeekService {
                 .flatMap(content -> saveAndReturn(guildId, userId, userMessage, content))
                 .doOnError(e -> log.error("AI 调用失败: {}", e.getMessage()))
                 .onErrorReturn("AI 服务暂时不可用，请稍后再试");
+    }
+
+    /**
+     * 流式对话 - 返回增量内容的 Flux
+     * @param onComplete 完成时的回调，用于保存完整响应
+     */
+    public Flux<String> chatStream(String guildId, String userId, String userMessage, 
+                                    java.util.function.Consumer<String> onComplete) {
+        return loadChatHistory(guildId, userId)
+                .flatMapMany(history -> callAiStream(history, userMessage, guildId, userId, userMessage, onComplete))
+                .doOnError(e -> log.error("AI 流式调用失败: {}", e.getMessage()))
+                .onErrorResume(e -> Flux.just("AI 服务暂时不可用，请稍后再试"));
+    }
+
+    /**
+     * 流式调用 AI
+     */
+    private Flux<String> callAiStream(List<ChatMessage> history, String userMessage,
+                                       String guildId, String userId, String originalMessage,
+                                       java.util.function.Consumer<String> onComplete) {
+        List<Message> messages = buildMessages(history, userMessage);
+        log.info("开始流式调用 AI，消息数: {}", messages.size());
+        Prompt prompt = new Prompt(messages);
+        StringBuilder fullContent = new StringBuilder();
+        
+        return chatClient.prompt(prompt)
+                .stream()
+                .content()
+                .filter(chunk -> chunk != null && !chunk.isEmpty())
+                .doOnNext(chunk -> fullContent.append(chunk))
+                .doOnComplete(() -> {
+                    String content = fullContent.toString();
+                    log.info("AI 流式响应完成，内容长度: {}", content.length());
+                    // 保存对话历史
+                    saveChatHistory(guildId, userId, originalMessage, content);
+                    if (onComplete != null) {
+                        onComplete.accept(content);
+                    }
+                })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     /**

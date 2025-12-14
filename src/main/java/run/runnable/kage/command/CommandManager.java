@@ -9,6 +9,7 @@ import run.runnable.kage.service.DeepSeekService;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * 命令管理器 - 负责分发 @机器人 命令
@@ -17,6 +18,9 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class CommandManager {
+
+    // Discord 不支持的 markdown 分隔线（匹配前后的换行符）
+    private static final Pattern HORIZONTAL_RULE = Pattern.compile("\\n*(-{3,}|\\*{3,}|_{3,})\\n*");
 
     private static final String EVENT_KEY_PREFIX = "discord:event:";
     private static final Duration EVENT_EXPIRE = Duration.ofMinutes(5);
@@ -77,7 +81,7 @@ public class CommandManager {
     }
 
     /**
-     * 调用 DeepSeek AI 进行对话
+     * 调用 DeepSeek AI 进行对话（流式响应）
      */
     private void chatWithAI(MessageReceivedEvent event, String message) {
         if (!event.isFromGuild()) {
@@ -88,20 +92,35 @@ public class CommandManager {
         String guildId = event.getGuild().getId();
         String userId = event.getAuthor().getId();
 
-        event.getChannel().sendMessage("🤔 思考中...").queue(thinkingMsg -> {
-            deepSeekService.chat(guildId, userId, message)
+        // 先回复一条消息，后续流式更新
+        event.getMessage().reply("🤔 思考中...").queue(replyMsg -> {
+            StringBuilder contentBuilder = new StringBuilder();
+            
+            deepSeekService.chatStream(guildId, userId, message, null)
+                    // 节流：每 500ms 更新一次，避免触发 Discord 速率限制
+                    .buffer(java.time.Duration.ofMillis(500))
                     .subscribe(
-                            answer -> {
-                                thinkingMsg.delete().queue();
-                                String reply = answer.length() > 1900
-                                        ? answer.substring(0, 1900) + "..."
-                                        : answer;
-                                // 使用 reply 回复原消息
-                                event.getMessage().reply(reply).queue();
+                            chunks -> {
+                                // 合并这段时间内的所有 chunk
+                                chunks.forEach(contentBuilder::append);
+                                String currentContent = formatForDiscord(contentBuilder.toString());
+                                
+                                // 截断过长内容（预留空间给提示）
+                                String displayContent = currentContent.length() > 1850
+                                        ? currentContent.substring(0, 1850) + "..."
+                                        : currentContent;
+                                
+                                // 添加输入中提示
+                                replyMsg.editMessage(displayContent + "\n\n`✍️ 输入中...`").queue();
                             },
-                            error -> {
-                                thinkingMsg.delete().queue();
-                                event.getMessage().reply("❌ 出错了: " + error.getMessage()).queue();
+                            error -> replyMsg.editMessage("❌ 出错了: " + error.getMessage()).queue(),
+                            () -> {
+                                // 完成时移除打字指示器，格式化输出
+                                String finalContent = formatForDiscord(contentBuilder.toString());
+                                String displayContent = finalContent.length() > 1900
+                                        ? finalContent.substring(0, 1900) + "..."
+                                        : finalContent;
+                                replyMsg.editMessage(displayContent).queue();
                             }
                     );
         });
@@ -109,5 +128,14 @@ public class CommandManager {
 
     public Map<String, Command> getCommands() {
         return commandRegistry.getCommandMap();
+    }
+
+    /**
+     * 格式化 AI 输出，移除 Discord 不支持的 markdown
+     */
+    private String formatForDiscord(String content) {
+        if (content == null) return "";
+        // 替换分隔线及其前后换行为单个换行
+        return HORIZONTAL_RULE.matcher(content).replaceAll("\n");
     }
 }

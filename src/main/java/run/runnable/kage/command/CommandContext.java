@@ -72,5 +72,10 @@ public interface CommandContext {
      */
     interface ReplyHook {
         void sendMessage(String message);
+        
+        /**
+         * 编辑已发送的消息（用于流式更新）
+         */
+        void editMessage(String message);
     }
 }
