@@ -6,6 +6,7 @@ import io.modelcontextprotocol.client.transport.WebClientStreamableHttpTransport
 import io.modelcontextprotocol.spec.McpSchema;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -26,21 +27,24 @@ public class McpClientConfig {
     @Value("${jina.api-key:}")
     private String jinaApiKey;
 
+    @Value("${jina.mcp.enabled:true}")
+    private boolean mcpEnabled;
+
     @Bean
     @Primary
+    @ConditionalOnProperty(name = "jina.mcp.enabled", havingValue = "true", matchIfMissing = true)
     public McpAsyncClient jinaAsyncMcpClient() {
         log.info("创建自定义 Jina MCP Client，API Key: {}...", 
                 jinaApiKey.length() > 10 ? jinaApiKey.substring(0, 10) : "未配置");
 
         // 创建带 Authorization header 的 WebClient Builder
-        // 使用 filter 确保每个请求都带上 Authorization header
         WebClient.Builder webClientBuilder = WebClient.builder()
                 .baseUrl("https://mcp.jina.ai")
                 .filter(addAuthorizationHeader());
 
-        // 使用 Builder 创建 Streamable HTTP 传输
+        // 使用 Streamable HTTP 传输 (Jina MCP 2025-03-26 spec)
         WebClientStreamableHttpTransport transport = WebClientStreamableHttpTransport.builder(webClientBuilder)
-                .endpoint("/mcp")
+                .endpoint("/v1")
                 .build();
 
         // 创建异步 MCP Client
@@ -62,7 +66,6 @@ public class McpClientConfig {
     private ExchangeFilterFunction addAuthorizationHeader() {
         return ExchangeFilterFunction.ofRequestProcessor(clientRequest -> {
             log.debug("MCP 请求: {} {}", clientRequest.method(), clientRequest.url());
-            log.debug("MCP 请求 Headers: {}", clientRequest.headers().keySet());
             
             // 如果请求中没有 Authorization header，添加它
             if (!clientRequest.headers().containsKey("Authorization")) {
