@@ -31,7 +31,7 @@ public class PlayCommand implements UnifiedCommand {
 
     @Override
     public String getDescription() {
-        return "播放音乐（支持 URL 或网易云歌曲 ID）";
+        return "播放音乐";
     }
 
     @Override
@@ -58,7 +58,7 @@ public class PlayCommand implements UnifiedCommand {
 
         String input = ctx.getString("url");
         if (input == null || input.isBlank()) {
-            ctx.reply("用法: `/play <URL>` 或 `/play <网易云歌曲ID>`\n例如: `/play 2599502751`");
+            ctx.reply("用法: `/play <URL>`");
             return;
         }
 
@@ -99,11 +99,6 @@ public class PlayCommand implements UnifiedCommand {
     }
 
     private String parseInput(String input) {
-        //FIXME 如果是纯数字，当作网易云歌曲 ID
-//        if (input.matches("\\d+")) {
-//            return "https://music.163.com/song/media/outer/url?id=" + input + ".mp3";
-//        }
-        // 否则当作 URL
         return input;
     }
 

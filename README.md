@@ -56,7 +56,7 @@ PRs are welcome! Feel free to contribute new features, bug fixes, or improvement
 - 📝 **Message Logging** - Record server messages for analytics
 - 🔧 **Extensible Command System** - Support for both traditional and slash commands
 - 🚀 **Horizontal Scaling** - Redis-based event deduplication enables deployment across unlimited instances
-- 🎵 **Music Player** - Play music in voice channels with queue management (supports URL and NetEase Cloud Music)
+- 🎵 **Music Player** - Play music in voice channels with queue management
 
 ## Commands
 
@@ -70,8 +70,9 @@ PRs are welcome! Feel free to contribute new features, bug fixes, or improvement
 | `/poll <title> <option1> <option2> ... <minutes>` | Create a poll (supports multiple choice & anonymous) |
 | `/countdown <time>` | Set off-work countdown (e.g. `/countdown 18:00`) |
 | `/countdown-cancel` | Cancel off-work countdown |
+| `/remind <time> <message>` | Set a reminder (e.g. `/remind 30m drink water`) |
 | `/fortune` | Check today's fortune and slacking index |
-| `/play <url>` | Play music (supports URL or NetEase Cloud Music ID) |
+| `/play <url>` | Play music |
 | `/stop` | Stop playing and leave voice channel |
 | `/skip` | Skip current track |
 | `/pause` | Pause/resume playback |
