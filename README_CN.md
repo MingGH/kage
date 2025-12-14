@@ -9,6 +9,23 @@
 - **添加到你的服务器**: [安装 Kage Bot](https://discord.com/oauth2/authorize?client_id=1449365950947266670)
 - **加入社区交流**: [Discord 摸鱼频道｜996Ninja 摸鱼忍者](https://discord.gg/UAC8NMsF)
 
+## 📸 功能截图
+
+### 把所有的命令喂给 AI 提示给用户
+![](https://img.996.ninja/ninjutsu/238f10d9328988b03f9e626d8403139d.png)
+
+### 和新成员打招呼
+![](https://img.996.ninja/ninjutsu/178ccf4fb65cd01d84624334c6194db3.png)
+
+### 基于 AI + Jina MCP 服务联网搜索
+![](https://img.996.ninja/ninjutsu/878d2a48da82c83d00169148a87404d5.png)
+
+### 抽奖
+![](https://img.996.ninja/ninjutsu/8f305fac4319af5244468abecf887f80.png)
+
+### 内存占用足够小
+![](https://img.996.ninja/ninjutsu/5248ce3463eef8e6a4837bf5bc7920b5.png)
+
 ## 📖 项目背景
 
 我想打造一款自己能使用的中文 Discord 机器人，mee6 的机器人实在太贵了。现在有了 Claude，我相信没什么不能做到的。

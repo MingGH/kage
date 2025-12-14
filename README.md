@@ -9,6 +9,23 @@ A feature-rich Discord bot built with Spring Boot WebFlux, featuring AI conversa
 - **Add to your server**: [Install Kage Bot](https://discord.com/oauth2/authorize?client_id=1449365950947266670)
 - **Join our community**: [Discord Server ｜ 996Ninja 摸鱼忍者](https://discord.gg/UAC8NMsF)
 
+## 📸 Screenshots
+
+### AI-Powered Command Suggestions
+![](https://img.996.ninja/ninjutsu/238f10d9328988b03f9e626d8403139d.png)
+
+### Welcome New Members
+![](https://img.996.ninja/ninjutsu/178ccf4fb65cd01d84624334c6194db3.png)
+
+### AI + Jina MCP Web Search
+![](https://img.996.ninja/ninjutsu/878d2a48da82c83d00169148a87404d5.png)
+
+### Lottery System
+![](https://img.996.ninja/ninjutsu/8f305fac4319af5244468abecf887f80.png)
+
+### Low Memory Footprint
+![](https://img.996.ninja/ninjutsu/5248ce3463eef8e6a4837bf5bc7920b5.png)
+
 ## 📖 Background
 
 I wanted to build a Chinese Discord bot that I could actually use. Mee6 is way too expensive, and with Claude by my side, I believe nothing is impossible. This project is the result of that vision.
