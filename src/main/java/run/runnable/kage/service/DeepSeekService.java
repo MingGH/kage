@@ -31,12 +31,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
 public class DeepSeekService {
 
     private static final int MAX_HISTORY_SIZE = 20;
+    
+    // 正在处理中的用户集合（guildId:userId）
+    private final Set<String> processingUsers = ConcurrentHashMap.newKeySet();
 
     private final ChatClient chatClient;
     private final ChatMessageRepository chatMessageRepository;
@@ -126,15 +131,45 @@ public class DeepSeekService {
     }
 
     /**
+     * 检查用户是否正在处理中
+     */
+    public boolean isUserProcessing(String guildId, String userId) {
+        String userKey = guildId + ":" + userId;
+        return processingUsers.contains(userKey);
+    }
+
+    /**
      * 流式对话 - 返回增量内容的 Flux
      * @param onComplete 完成时的回调，用于保存完整响应
      */
     public Flux<String> chatStream(String guildId, String userId, String userMessage, 
                                     java.util.function.Consumer<String> onComplete) {
+        String userKey = guildId + ":" + userId;
+        
+        // 尝试获取锁
+        if (!processingUsers.add(userKey)) {
+            return Flux.error(new UserBusyException("请等待上一个问题回复完成"));
+        }
+        
         return loadChatHistory(guildId, userId)
                 .flatMapMany(history -> callAiStream(history, userMessage, guildId, userId, userMessage, onComplete))
                 .doOnError(e -> log.error("AI 流式调用失败: {}", e.getMessage()))
-                .onErrorResume(e -> Flux.just("AI 服务暂时不可用，请稍后再试"));
+                .doFinally(signal -> processingUsers.remove(userKey))  // 无论成功失败都释放锁
+                .onErrorResume(e -> {
+                    if (e instanceof UserBusyException) {
+                        return Flux.just(e.getMessage());
+                    }
+                    return Flux.just("AI 服务暂时不可用，请稍后再试");
+                });
+    }
+    
+    /**
+     * 用户正在处理中的异常
+     */
+    public static class UserBusyException extends RuntimeException {
+        public UserBusyException(String message) {
+            super(message);
+        }
     }
 
     /**
