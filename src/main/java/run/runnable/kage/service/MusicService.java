@@ -4,7 +4,9 @@ import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
+import com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
+import com.sedmelluq.discord.lavaplayer.tools.io.HttpConfigurable;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.playback.NonAllocatingAudioFrameBuffer;
@@ -13,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
 import net.dv8tion.jda.api.managers.AudioManager;
+import org.apache.http.client.config.RequestConfig;
 import org.springframework.stereotype.Service;
 import run.runnable.kage.service.audio.GuildMusicManager;
 
@@ -39,14 +42,54 @@ public class MusicService {
                 NonAllocatingAudioFrameBuffer::new
         );
         
-        // 设置缓冲时间（默认 5000ms，增加到 15 秒）
-        playerManager.setFrameBufferDuration(15000);
+        // 设置缓冲时间（默认 5000ms，增加到 120 秒）
+        // 更大的缓冲可以应对网络波动
+        playerManager.setFrameBufferDuration(120000);
+        
+        // 增加加载线程数，加快音频预加载（默认为 CPU 核心数）
+        playerManager.setItemLoaderThreadPoolSize(10);
+        
+        // 设置播放器清理阈值（默认 30 秒），增加到 120 秒
+        // 防止因网络波动导致播放器被过早清理
+        playerManager.setPlayerCleanupThreshold(120000);
         
         // 注册远程音源（HTTP、YouTube 等）
         AudioSourceManagers.registerRemoteSources(playerManager);
         // 注册本地音源
         AudioSourceManagers.registerLocalSource(playerManager);
+        
+        // 优化 HTTP 连接配置
+        configureHttpSources();
+        
         log.info("音乐服务初始化完成");
+    }
+    
+    /**
+     * 配置 HTTP 音源的连接参数
+     */
+    private void configureHttpSources() {
+        // 配置 HTTP 请求参数
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(30000)           // 连接超时 30 秒
+                .setSocketTimeout(60000)            // 读取超时 60 秒
+                .setConnectionRequestTimeout(30000) // 从连接池获取连接超时 30 秒
+                .build();
+        
+        // 应用到所有支持 HTTP 配置的音源
+        playerManager.source(HttpAudioSourceManager.class).configureRequests(config -> 
+                RequestConfig.copy(requestConfig).build()
+        );
+        
+        // 对所有 HTTP 可配置的源应用配置
+        playerManager.getSourceManagers().forEach(source -> {
+            if (source instanceof HttpConfigurable) {
+                ((HttpConfigurable) source).configureRequests(config -> 
+                        RequestConfig.copy(requestConfig).build()
+                );
+            }
+        });
+        
+        log.info("HTTP 音源配置完成: 连接超时=30s, 读取超时=60s");
     }
 
     /**
