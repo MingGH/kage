@@ -8,7 +8,6 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.springframework.stereotype.Component;
 import run.runnable.kage.command.SlashCommand;
-import run.runnable.kage.command.SlashCommandContext;
 
 import java.util.HashMap;
 import java.util.List;
@@ -20,6 +19,7 @@ import java.util.Map;
 public class SlashCommandManager extends ListenerAdapter {
 
     private final List<SlashCommand> slashCommands;
+    private final EventDeduplicationService deduplicationService;
     private final Map<String, SlashCommand> commandMap = new HashMap<>();
 
     @PostConstruct
@@ -51,11 +51,17 @@ public class SlashCommandManager extends ListenerAdapter {
         String commandName = event.getName().toLowerCase();
         SlashCommand command = commandMap.get(commandName);
 
-        if (command != null) {
+        if (command == null) {
+            event.reply("❌ 未知命令").setEphemeral(true).queue();
+            return;
+        }
+
+        // 使用统一去重服务
+        if (deduplicationService.tryAcquire("slash", event.getInteraction().getId())) {
             log.info("执行 Slash 命令: /{} by {}", commandName, event.getUser().getName());
             command.execute(event);
         } else {
-            event.reply("❌ 未知命令").setEphemeral(true).queue();
+            log.debug("Slash 命令已被其他实例处理: /{}", commandName);
         }
     }
 }

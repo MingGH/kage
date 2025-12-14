@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.springframework.stereotype.Component;
 import run.runnable.kage.domain.Poll;
+import run.runnable.kage.service.EventDeduplicationService;
 import run.runnable.kage.service.PollService;
 
 @Slf4j
@@ -14,12 +15,19 @@ import run.runnable.kage.service.PollService;
 public class PollButtonListener extends ListenerAdapter {
 
     private final PollService pollService;
+    private final EventDeduplicationService deduplicationService;
 
     @Override
     public void onButtonInteraction(ButtonInteractionEvent event) {
         String buttonId = event.getComponentId();
 
         if (!buttonId.startsWith("poll_")) {
+            return;
+        }
+
+        // 去重检查
+        if (!deduplicationService.tryAcquire("button", event.getInteraction().getId())) {
+            log.debug("按钮交互已被其他实例处理: {}", buttonId);
             return;
         }
 
