@@ -29,7 +29,9 @@ PRs are welcome! Feel free to contribute new features, bug fixes, or improvement
 - 🤖 **AI Chat** - Powered by DeepSeek API with multi-turn conversation support
 - 🌐 **Web Search** - Integrated with Jina AI via MCP (Model Context Protocol) for real-time web search and content reading
 - 🎰 **Lottery System** - Create lotteries, user participation, automatic drawing
-- 📊 **Poll System** - Create polls with multiple options
+- 📊 **Poll System** - Create polls with multiple options, supports multiple choice & anonymous voting
+- ⏰ **Off-work Countdown** - Set countdown timer with periodic reminders
+- 🔮 **Daily Fortune** - Check your daily fortune and slacking index
 - 📝 **Message Logging** - Record server messages for analytics
 - 🔧 **Extensible Command System** - Support for both traditional and slash commands
 
@@ -42,10 +44,25 @@ PRs are welcome! Feel free to contribute new features, bug fixes, or improvement
 | `/ask <question>` | Ask AI a question |
 | `/clear` | Clear AI conversation history |
 | `/lottery <prize> <winners> <minutes>` | Start a lottery |
-| `/poll <question> <option1> <option2> ...` | Create a poll |
+| `/poll <title> <option1> <option2> ... <minutes>` | Create a poll (supports multiple choice & anonymous) |
+| `/countdown <time>` | Set off-work countdown (e.g. `/countdown 18:00`) |
+| `/countdown-cancel` | Cancel off-work countdown |
+| `/fortune` | Check today's fortune and slacking index |
 | `/ping` | Test bot response |
 | `/hello` | Say hello |
 | `/help` | Show help information |
+
+### @Mention Commands
+
+You can also use commands by mentioning the bot:
+
+| Command | Description |
+|---------|-------------|
+| `@BuBu ask <question>` | Ask AI a question |
+| `@BuBu 抽奖 <prize> <winners> <minutes>` | Start a lottery |
+| `@BuBu 投票 <title> \| <opt1> \| <opt2> \| <minutes>` | Create a poll |
+| `@BuBu countdown <time>` | Set off-work countdown |
+| `@BuBu fortune` | Check today's fortune |
 
 ### @Mention Chat
 

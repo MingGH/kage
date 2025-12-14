@@ -31,7 +31,7 @@ public class LotteryCommand implements UnifiedCommand {
 
     @Override
     public String getDescription() {
-        return "发起抽奖 (用法: !抽奖 奖品 中奖人数 持续分钟)";
+        return "发起抽奖 (用法: 抽奖 奖品 中奖人数 持续分钟)";
     }
 
     @Override
