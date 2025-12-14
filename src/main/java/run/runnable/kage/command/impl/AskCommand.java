@@ -60,6 +60,7 @@ public class AskCommand implements UnifiedCommand {
 
         String guildId = ctx.getGuild().getId();
         String userId = ctx.getUser().getId();
+        String channelId = ctx.getChannel().getId();
         String finalQuestion = question;
 
         // 检查用户是否正在处理中
@@ -72,7 +73,7 @@ public class AskCommand implements UnifiedCommand {
             StringBuilder contentBuilder = new StringBuilder();
             AtomicReference<String> lastSentContent = new AtomicReference<>("");
             
-            deepSeekService.chatStream(guildId, userId, finalQuestion, null)
+            deepSeekService.chatStream(guildId, userId, channelId, finalQuestion, null)
                     // 节流：每 500ms 更新一次，避免触发 Discord 速率限制
                     .buffer(Duration.ofMillis(500))
                     .subscribe(

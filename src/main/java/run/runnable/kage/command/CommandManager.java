@@ -58,9 +58,12 @@ public class CommandManager {
     }
 
     private void executeCommand(MessageReceivedEvent event, String commandContent) {
+        // 构建完整消息（包含引用内容）
+        String fullMessage = buildMessageWithQuote(event, commandContent);
+        
         // 如果 @机器人 后面没有内容，当作打招呼
         if (commandContent.isBlank()) {
-            chatWithAI(event, "你好");
+            chatWithAI(event, fullMessage.isBlank() ? "你好" : fullMessage);
             return;
         }
 
@@ -70,7 +73,7 @@ public class CommandManager {
 
         // 如果没有匹配到命令，直接当作 AI 对话
         if (cmd == null) {
-            chatWithAI(event, commandContent);
+            chatWithAI(event, fullMessage);
             return;
         }
 
@@ -78,6 +81,28 @@ public class CommandManager {
         System.arraycopy(parts, 1, args, 0, args.length);
         log.info("执行命令: {} by {}", commandName, event.getAuthor().getName());
         cmd.execute(event, args);
+    }
+
+    /**
+     * 构建包含引用消息的完整内容
+     */
+    private String buildMessageWithQuote(MessageReceivedEvent event, String userMessage) {
+        var referencedMessage = event.getMessage().getReferencedMessage();
+        
+        if (referencedMessage != null) {
+            String quotedAuthor = referencedMessage.getAuthor().getName();
+            String quotedContent = referencedMessage.getContentRaw();
+            
+            // 如果引用内容不为空，添加到消息前面
+            if (!quotedContent.isBlank()) {
+                return String.format("[引用 %s 的消息: \"%s\"]\n\n%s", 
+                        quotedAuthor, 
+                        quotedContent.length() > 500 ? quotedContent.substring(0, 500) + "..." : quotedContent,
+                        userMessage);
+            }
+        }
+        
+        return userMessage;
     }
 
     /**
@@ -91,6 +116,7 @@ public class CommandManager {
 
         String guildId = event.getGuild().getId();
         String userId = event.getAuthor().getId();
+        String channelId = event.getChannel().getId();
 
         // 检查用户是否正在处理中
         if (deepSeekService.isUserProcessing(guildId, userId)) {
@@ -102,7 +128,7 @@ public class CommandManager {
         event.getMessage().reply("🤔 思考中...").queue(replyMsg -> {
             StringBuilder contentBuilder = new StringBuilder();
             
-            deepSeekService.chatStream(guildId, userId, message, null)
+            deepSeekService.chatStream(guildId, userId, channelId, message, null)
                     // 节流：每 500ms 更新一次，避免触发 Discord 速率限制
                     .buffer(java.time.Duration.ofMillis(500))
                     .subscribe(

@@ -21,9 +21,13 @@ import reactor.util.retry.Retry;
 import run.runnable.kage.command.CommandRegistry;
 import run.runnable.kage.domain.ChatMessage;
 import run.runnable.kage.repository.ChatMessageRepository;
+import run.runnable.kage.service.tool.ChannelHistoryTool;
 
 import org.springframework.beans.factory.annotation.Value;
 
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
+
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -31,23 +35,22 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
 public class DeepSeekService {
 
     private static final int MAX_HISTORY_SIZE = 20;
+    private static final String PROCESSING_KEY_PREFIX = "kage:processing:";
+    private static final Duration PROCESSING_LOCK_TTL = Duration.ofMinutes(5);
     
-    // 正在处理中的用户集合（guildId:userId）
-    private final Set<String> processingUsers = ConcurrentHashMap.newKeySet();
-
+    private final ReactiveStringRedisTemplate redisTemplate;
     private final ChatClient chatClient;
     private final ChatMessageRepository chatMessageRepository;
-    private final ToolCallback[] mcpTools;
+    private final ToolCallback[] allTools;
     private final String systemPromptTemplate;
     private final String mcpToolsDescription;
+    private final ChannelHistoryTool channelHistoryTool;
     
     @Lazy
     @Autowired
@@ -56,38 +59,49 @@ public class DeepSeekService {
     public DeepSeekService(ChatClient.Builder chatClientBuilder,
                            ChatMessageRepository chatMessageRepository,
                            @Lazy McpAsyncClient mcpAsyncClient,
+                           ChannelHistoryTool channelHistoryTool,
+                           ReactiveStringRedisTemplate redisTemplate,
                            @Value("${ai.system-prompt}") String systemPromptTemplate) {
         this.systemPromptTemplate = systemPromptTemplate;
         this.chatMessageRepository = chatMessageRepository;
+        this.channelHistoryTool = channelHistoryTool;
+        this.redisTemplate = redisTemplate;
+        
+        List<ToolCallback> toolList = new ArrayList<>();
+        StringBuilder toolDescBuilder = new StringBuilder();
         
         // 从自定义 MCP Client 获取工具
         var tools = mcpAsyncClient.listTools().block();
         if (tools != null && tools.tools() != null) {
-            this.mcpTools = tools.tools().stream()
+            var mcpTools = tools.tools().stream()
                     .map(tool -> new AsyncMcpToolCallback(mcpAsyncClient, tool))
-                    .toArray(ToolCallback[]::new);
-            log.info("已加载 {} 个 MCP 工具", mcpTools.length);
+                    .toList();
+            toolList.addAll(mcpTools);
+            log.info("已加载 {} 个 MCP 工具", mcpTools.size());
             
             // 构建 MCP 工具描述
-            StringBuilder sb = new StringBuilder();
             for (ToolCallback tool : mcpTools) {
                 String name = tool.getToolDefinition().name();
                 String desc = tool.getToolDefinition().description();
                 // 简化工具名（去掉 k_b_ 前缀）
                 String simpleName = name.startsWith("k_b_") ? name.substring(4) : name;
-                sb.append("- ").append(simpleName).append(": ").append(getShortDescription(desc)).append("\n");
+                toolDescBuilder.append("- ").append(simpleName).append(": ").append(getShortDescription(desc)).append("\n");
                 log.info("  - {}: {}", name, desc);
             }
-            this.mcpToolsDescription = sb.toString();
         } else {
-            this.mcpTools = new ToolCallback[0];
-            this.mcpToolsDescription = "暂无可用工具";
             log.warn("未能加载 MCP 工具");
         }
         
-        // 构建带工具的 ChatClient
+        // 添加内置工具描述
+        toolDescBuilder.append("- getRecentChannelMessages: 查询当前频道最近的聊天记录\n");
+        
+        this.mcpToolsDescription = toolDescBuilder.length() > 0 ? toolDescBuilder.toString() : "暂无可用工具";
+        this.allTools = toolList.toArray(new ToolCallback[0]);
+        
+        // 构建带工具的 ChatClient（内置工具通过 @Tool 注解自动注册）
         this.chatClient = chatClientBuilder
-                .defaultToolCallbacks(mcpTools)
+                .defaultToolCallbacks(allTools)
+                .defaultTools(channelHistoryTool)
                 .build();
     }
 
@@ -134,27 +148,49 @@ public class DeepSeekService {
      * 检查用户是否正在处理中
      */
     public boolean isUserProcessing(String guildId, String userId) {
-        String userKey = guildId + ":" + userId;
-        return processingUsers.contains(userKey);
+        String redisKey = PROCESSING_KEY_PREFIX + guildId + ":" + userId;
+        return Boolean.TRUE.equals(redisTemplate.hasKey(redisKey).block());
+    }
+    
+    /**
+     * 尝试获取用户处理锁
+     */
+    private boolean tryAcquireLock(String guildId, String userId) {
+        String redisKey = PROCESSING_KEY_PREFIX + guildId + ":" + userId;
+        return Boolean.TRUE.equals(
+            redisTemplate.opsForValue().setIfAbsent(redisKey, "1", PROCESSING_LOCK_TTL).block()
+        );
+    }
+    
+    /**
+     * 释放用户处理锁
+     */
+    private void releaseLock(String guildId, String userId) {
+        String redisKey = PROCESSING_KEY_PREFIX + guildId + ":" + userId;
+        redisTemplate.delete(redisKey).subscribe();
     }
 
     /**
      * 流式对话 - 返回增量内容的 Flux
      * @param onComplete 完成时的回调，用于保存完整响应
      */
-    public Flux<String> chatStream(String guildId, String userId, String userMessage, 
+    public Flux<String> chatStream(String guildId, String userId, String channelId, String userMessage, 
                                     java.util.function.Consumer<String> onComplete) {
-        String userKey = guildId + ":" + userId;
-        
-        // 尝试获取锁
-        if (!processingUsers.add(userKey)) {
+        // 尝试获取分布式锁
+        if (!tryAcquireLock(guildId, userId)) {
             return Flux.error(new UserBusyException("请等待上一个问题回复完成"));
         }
+        
+        // 设置频道上下文，供工具使用
+        channelHistoryTool.setContext(guildId, userId, channelId);
         
         return loadChatHistory(guildId, userId)
                 .flatMapMany(history -> callAiStream(history, userMessage, guildId, userId, userMessage, onComplete))
                 .doOnError(e -> log.error("AI 流式调用失败: {}", e.getMessage()))
-                .doFinally(signal -> processingUsers.remove(userKey))  // 无论成功失败都释放锁
+                .doFinally(signal -> {
+                    releaseLock(guildId, userId);  // 释放分布式锁
+                    channelHistoryTool.clearContext(guildId, userId);  // 清理上下文
+                })
                 .onErrorResume(e -> {
                     if (e instanceof UserBusyException) {
                         return Flux.just(e.getMessage());
@@ -178,7 +214,7 @@ public class DeepSeekService {
     private Flux<String> callAiStream(List<ChatMessage> history, String userMessage,
                                        String guildId, String userId, String originalMessage,
                                        java.util.function.Consumer<String> onComplete) {
-        List<Message> messages = buildMessages(history, userMessage);
+        List<Message> messages = buildMessages(history, userMessage, guildId, userId);
         log.info("开始流式调用 AI，消息数: {}", messages.size());
         Prompt prompt = new Prompt(messages);
         StringBuilder fullContent = new StringBuilder();
@@ -219,7 +255,7 @@ public class DeepSeekService {
         List<Message> messages = buildMessages(history, userMessage);
         
         return Mono.fromCallable(() -> {
-            log.info("开始调用 AI，消息数: {}, 可用工具数: {}", messages.size(), mcpTools.length);
+            log.info("开始调用 AI，消息数: {}, 可用工具数: {}", messages.size(), allTools.length);
             Prompt prompt = new Prompt(messages);
             var response = chatClient.prompt(prompt).call();
             String content = response.content();
@@ -251,8 +287,21 @@ public class DeepSeekService {
      * 构建 Spring AI 消息列表
      */
     private List<Message> buildMessages(List<ChatMessage> history, String userMessage) {
+        return buildMessages(history, userMessage, null, null);
+    }
+    
+    /**
+     * 构建 Spring AI 消息列表（带上下文信息）
+     */
+    private List<Message> buildMessages(List<ChatMessage> history, String userMessage, String guildId, String userId) {
         List<Message> messages = new ArrayList<>();
-        messages.add(new SystemMessage(getSystemPrompt()));
+        
+        // 构建系统提示词，包含上下文信息
+        String systemPrompt = getSystemPrompt();
+        if (guildId != null && userId != null) {
+            systemPrompt += "\n\n当前上下文信息（调用工具时使用）：\n- guildId: " + guildId + "\n- userId: " + userId;
+        }
+        messages.add(new SystemMessage(systemPrompt));
 
         history.forEach(msg -> {
             if ("user".equals(msg.getRole())) {

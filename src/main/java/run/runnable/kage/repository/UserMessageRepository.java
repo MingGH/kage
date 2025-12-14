@@ -23,4 +23,10 @@ public interface UserMessageRepository extends R2dbcRepository<UserMessage, Long
      */
     @Query("SELECT * FROM user_message WHERE guild_id = :guildId AND created_at BETWEEN :start AND :end ORDER BY created_at")
     Flux<UserMessage> findByGuildAndDateRange(String guildId, LocalDateTime start, LocalDateTime end);
+
+    /**
+     * 获取频道最近指定时间内的消息
+     */
+    @Query("SELECT * FROM user_message WHERE guild_id = :guildId AND channel_id = :channelId AND created_at >= :since ORDER BY created_at DESC LIMIT :limit")
+    Flux<UserMessage> findRecentByChannel(String guildId, String channelId, LocalDateTime since, int limit);
 }

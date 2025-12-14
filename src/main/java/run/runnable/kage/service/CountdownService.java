@@ -148,6 +148,7 @@ public class CountdownService {
                         // 解析 key: countdown:guildId:userId
                         String[] keyParts = key.split(":");
                         if (keyParts.length < 3) return;
+                        String userId = keyParts[2];
                         
                         // 解析 value: channelId:HH:mm
                         String[] valueParts = value.split(":");
@@ -171,11 +172,11 @@ public class CountdownService {
                         long hours = minutes / 60;
                         long mins = minutes % 60;
                         
-                        // 发送提醒
+                        // 发送提醒，@ 发起倒计时的用户
                         TextChannel channel = jda.getTextChannelById(channelId);
                         if (channel != null) {
-                            String message = String.format("⏰ **下班倒计时提醒**\n\n距离下班还有 **%d 小时 %d 分钟**\n\n%s", 
-                                    hours, mins, getEncouragement(minutes));
+                            String message = String.format("<@%s> ⏰ **下班倒计时提醒**\n\n距离下班还有 **%d 小时 %d 分钟**\n\n%s", 
+                                    userId, hours, mins, getEncouragement(minutes));
                             channel.sendMessage(message).queue();
                         }
                     } catch (Exception e) {
