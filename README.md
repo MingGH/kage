@@ -35,6 +35,7 @@ I wanted to build a Chinese Discord bot that I could actually use. Mee6 is way t
 
 ## 🆕 Recent Updates
 
+- **Streaming AI Responses** - AI replies appear in real-time with typing indicator, per-user request queuing prevents conflicts
 - **MCP Integration** - Added Jina MCP support for real-time web search and content reading
 - **Spring AI 1.1.0** - Upgraded to latest Spring AI with native MCP client support
 - **Multi-turn Conversations** - AI remembers conversation context per user per server
