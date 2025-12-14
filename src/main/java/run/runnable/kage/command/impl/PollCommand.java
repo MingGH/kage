@@ -30,7 +30,7 @@ public class PollCommand implements UnifiedCommand {
 
     @Override
     public String getDescription() {
-        return "创建投票 (用法: !投票 标题 | 选项1 | 选项2 | ... | 分钟 [多选] [匿名])";
+        return "创建投票 (用法: 投票 标题 | 选项1 | 选项2 | ... | 分钟 [多选] [匿名])";
     }
 
     @Override
@@ -83,10 +83,10 @@ public class PollCommand implements UnifiedCommand {
             String rawArgs = ctx.getRawArgs();
             if (rawArgs == null || rawArgs.isBlank()) {
                 ctx.reply("""
-                        用法: `!投票 标题 | 选项1 | 选项2 | ... | 分钟 [多选] [匿名]`
-                        例如: `!投票 今晚吃什么 | 火锅 | 烧烤 | 披萨 | 30`
-                        多选: `!投票 喜欢的颜色 | 红 | 蓝 | 绿 | 60 多选`
-                        匿名: `!投票 满意度调查 | 满意 | 一般 | 不满意 | 120 匿名`
+                        用法: `投票 标题 | 选项1 | 选项2 | ... | 分钟 [多选] [匿名]`
+                        例如: `投票 今晚吃什么 | 火锅 | 烧烤 | 披萨 | 30`
+                        多选: `投票 喜欢的颜色 | 红 | 蓝 | 绿 | 60 多选`
+                        匿名: `投票 满意度调查 | 满意 | 一般 | 不满意 | 120 匿名`
                         """);
                 return;
             }

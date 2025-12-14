@@ -67,13 +67,13 @@ public class LotteryCommand implements UnifiedCommand {
             // 从传统命令参数解析
             String rawArgs = ctx.getRawArgs();
             if (rawArgs == null || rawArgs.isBlank()) {
-                ctx.reply("用法: `!抽奖 奖品名称 中奖人数 持续分钟`\n例如: `!抽奖 Steam游戏 1 30`");
+                ctx.reply("用法: `抽奖 奖品名称 中奖人数 持续分钟`\n例如: `抽奖 Steam游戏 1 30`");
                 return;
             }
 
             Matcher matcher = PATTERN.matcher(rawArgs);
             if (!matcher.matches()) {
-                ctx.reply("格式错误！用法: `!抽奖 奖品名称 中奖人数 持续分钟`");
+                ctx.reply("格式错误！用法: `抽奖 奖品名称 中奖人数 持续分钟`");
                 return;
             }
 

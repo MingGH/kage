@@ -7,7 +7,7 @@
 ## 🎯 立即体验
 
 - **添加到你的服务器**: [安装 Kage Bot](https://discord.com/oauth2/authorize?client_id=1449365950947266670)
-- **加入社区交流**: [Discord 摸鱼频道](https://discord.gg/UAC8NMsF)
+- **加入社区交流**: [Discord 摸鱼频道｜996Ninja 摸鱼忍者](https://discord.gg/UAC8NMsF)
 
 ## 📖 项目背景
 

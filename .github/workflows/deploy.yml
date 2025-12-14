@@ -49,5 +49,9 @@ jobs:
         run: |
           kubectl --kubeconfig=K3S_KUBE_CONFIG.yaml apply -f k3s-deployment-prod.yaml
           kubectl --kubeconfig=K3S_KUBE_CONFIG.yaml patch deployment kage-deployment -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"date\":\"`date +'%s'`\"}}}}}" -n 996ninja
-          
-          
+      - name: Notify Discord
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+            -d "{\"content\": \"✅ **布布管家部署成功！**\n\n📦 提交: \`${{ github.sha }}\`\n👤 提交者: ${{ github.actor }}\n📝 消息: ${{ github.event.head_commit.message }}\"}" \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}
