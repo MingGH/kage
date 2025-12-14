@@ -1,11 +1,13 @@
 package run.runnable.kage.command.impl;
 
 import lombok.RequiredArgsConstructor;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import org.springframework.stereotype.Component;
 import run.runnable.kage.command.CommandContext;
+import run.runnable.kage.command.MessageCommandContext;
 import run.runnable.kage.command.UnifiedCommand;
 import run.runnable.kage.service.CountdownService;
 
