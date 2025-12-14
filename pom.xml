@@ -126,6 +126,13 @@
             <version>5.1.2</version>
         </dependency>
 
+        <!-- LavaPlayer 音频播放 -->
+        <dependency>
+            <groupId>dev.arbjerg</groupId>
+            <artifactId>lavaplayer</artifactId>
+            <version>2.2.2</version>
+        </dependency>
+
         <!-- Spring AI - OpenAI 兼容 (用于 DeepSeek) -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
@@ -162,6 +169,12 @@
             <id>central</id>
             <name>Maven Central</name>
             <url>https://repo1.maven.org/maven2</url>
+        </repository>
+        <!-- LavaPlayer 仓库 -->
+        <repository>
+            <id>arbjerg</id>
+            <name>Arbjerg Releases</name>
+            <url>https://maven.lavalink.dev/releases</url>
         </repository>
     </repositories>
 
