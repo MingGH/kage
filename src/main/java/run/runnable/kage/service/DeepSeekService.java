@@ -11,10 +11,12 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.mcp.AsyncMcpToolCallback;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.retry.Retry;
 import run.runnable.kage.command.CommandRegistry;
 import run.runnable.kage.domain.ChatMessage;
 import run.runnable.kage.repository.ChatMessageRepository;
@@ -37,18 +39,20 @@ public class DeepSeekService {
 
     private final ChatClient chatClient;
     private final ChatMessageRepository chatMessageRepository;
-    private final CommandRegistry commandRegistry;
     private final ToolCallback[] mcpTools;
     private final String systemPromptTemplate;
+    private final String mcpToolsDescription;
+    
+    @Lazy
+    @Autowired
+    private CommandRegistry commandRegistry;
 
     public DeepSeekService(ChatClient.Builder chatClientBuilder,
                            ChatMessageRepository chatMessageRepository,
-                           @Lazy CommandRegistry commandRegistry,
                            @Lazy McpAsyncClient mcpAsyncClient,
                            @Value("${ai.system-prompt}") String systemPromptTemplate) {
         this.systemPromptTemplate = systemPromptTemplate;
         this.chatMessageRepository = chatMessageRepository;
-        this.commandRegistry = commandRegistry;
         
         // 从自定义 MCP Client 获取工具
         var tools = mcpAsyncClient.listTools().block();
@@ -57,11 +61,21 @@ public class DeepSeekService {
                     .map(tool -> new AsyncMcpToolCallback(mcpAsyncClient, tool))
                     .toArray(ToolCallback[]::new);
             log.info("已加载 {} 个 MCP 工具", mcpTools.length);
+            
+            // 构建 MCP 工具描述
+            StringBuilder sb = new StringBuilder();
             for (ToolCallback tool : mcpTools) {
-                log.info("  - {}: {}", tool.getToolDefinition().name(), tool.getToolDefinition().description());
+                String name = tool.getToolDefinition().name();
+                String desc = tool.getToolDefinition().description();
+                // 简化工具名（去掉 k_b_ 前缀）
+                String simpleName = name.startsWith("k_b_") ? name.substring(4) : name;
+                sb.append("- ").append(simpleName).append(": ").append(getShortDescription(desc)).append("\n");
+                log.info("  - {}: {}", name, desc);
             }
+            this.mcpToolsDescription = sb.toString();
         } else {
             this.mcpTools = new ToolCallback[0];
+            this.mcpToolsDescription = "暂无可用工具";
             log.warn("未能加载 MCP 工具");
         }
         
@@ -71,12 +85,32 @@ public class DeepSeekService {
                 .build();
     }
 
+    @PostConstruct
+    public void init() {
+        log.info("========== AI 系统提示词 ==========");
+        log.info("\n{}", getSystemPrompt());
+        log.info("===================================");
+    }
+    
+    /**
+     * 获取简短描述（取第一句话）
+     */
+    private String getShortDescription(String desc) {
+        if (desc == null) return "";
+        int idx = desc.indexOf('.');
+        if (idx > 0 && idx < 80) {
+            return desc.substring(0, idx + 1);
+        }
+        return desc.length() > 80 ? desc.substring(0, 80) + "..." : desc;
+    }
+
     private String getSystemPrompt() {
         String currentTime = LocalDateTime.now(ZoneId.of("Asia/Shanghai"))
                 .format(DateTimeFormatter.ofPattern("yyyy年M月d日 EEEE HH:mm", Locale.CHINESE));
         return systemPromptTemplate
                 .replace("{time}", currentTime)
-                .replace("{commands}", commandRegistry.getCommandListText());
+                .replace("{commands}", commandRegistry.getCommandListText())
+                .replace("{tools}", mcpToolsDescription);
     }
 
     /**
@@ -103,7 +137,7 @@ public class DeepSeekService {
     }
 
     /**
-     * 构建消息列表并调用 AI
+     * 构建消息列表并调用 AI（带重试）
      */
     private Mono<String> callAi(List<ChatMessage> history, String userMessage) {
         List<Message> messages = buildMessages(history, userMessage);
@@ -115,7 +149,26 @@ public class DeepSeekService {
             String content = response.content();
             log.info("AI 响应完成，内容长度: {}", content != null ? content.length() : 0);
             return content;
-        }).subscribeOn(Schedulers.boundedElastic());
+        })
+        .subscribeOn(Schedulers.boundedElastic())
+        .retryWhen(Retry.backoff(3, java.time.Duration.ofSeconds(2))
+                .maxBackoff(java.time.Duration.ofSeconds(10))
+                .filter(this::isRetryableException)
+                .doBeforeRetry(signal -> log.warn("AI 调用失败，第 {} 次重试: {}", 
+                        signal.totalRetries() + 1, signal.failure().getMessage())));
+    }
+    
+    /**
+     * 判断是否可重试的异常（超时、网络错误等）
+     */
+    private boolean isRetryableException(Throwable e) {
+        String message = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+        return message.contains("timeout") 
+                || message.contains("connection") 
+                || message.contains("reset")
+                || message.contains("refused")
+                || e instanceof java.net.SocketTimeoutException
+                || e instanceof java.io.IOException;
     }
 
     /**

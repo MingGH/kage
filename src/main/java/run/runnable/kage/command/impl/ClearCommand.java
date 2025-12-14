@@ -1,16 +1,18 @@
 package run.runnable.kage.command.impl;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import run.runnable.kage.command.CommandContext;
 import run.runnable.kage.command.UnifiedCommand;
 import run.runnable.kage.service.DeepSeekService;
 
 @Component
-@RequiredArgsConstructor
 public class ClearCommand implements UnifiedCommand {
 
-    private final DeepSeekService deepSeekService;
+    @Lazy
+    @Autowired
+    private DeepSeekService deepSeekService;
 
     @Override
     public String getName() {

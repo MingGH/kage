@@ -78,21 +78,22 @@ public class MessageCommandContext implements CommandContext {
 
     @Override
     public void reply(String message) {
-        event.getChannel().sendMessage(message).queue();
+        // 引用回复原消息
+        event.getMessage().reply(message).queue();
     }
 
     @Override
     public void replyEphemeral(String message) {
-        // 传统命令没有私密回复，直接发送
-        event.getChannel().sendMessage(message).queue();
+        // 传统命令没有私密回复，直接引用回复
+        event.getMessage().reply(message).queue();
     }
 
     @Override
     public void deferReply(Consumer<ReplyHook> callback) {
-        event.getChannel().sendMessage("🤔 处理中...").queue(msg -> {
+        event.getMessage().reply("🤔 处理中...").queue(msg -> {
             callback.accept(response -> {
                 msg.delete().queue();
-                event.getChannel().sendMessage(response).queue();
+                event.getMessage().reply(response).queue();
             });
         });
     }

@@ -81,7 +81,7 @@ public class CommandManager {
      */
     private void chatWithAI(MessageReceivedEvent event, String message) {
         if (!event.isFromGuild()) {
-            event.getChannel().sendMessage("❌ 该功能只能在服务器中使用").queue();
+            event.getMessage().reply("❌ 该功能只能在服务器中使用").queue();
             return;
         }
 
@@ -96,11 +96,12 @@ public class CommandManager {
                                 String reply = answer.length() > 1900
                                         ? answer.substring(0, 1900) + "..."
                                         : answer;
-                                event.getChannel().sendMessage(reply).queue();
+                                // 使用 reply 回复原消息
+                                event.getMessage().reply(reply).queue();
                             },
                             error -> {
                                 thinkingMsg.delete().queue();
-                                event.getChannel().sendMessage("❌ 出错了: " + error.getMessage()).queue();
+                                event.getMessage().reply("❌ 出错了: " + error.getMessage()).queue();
                             }
                     );
         });

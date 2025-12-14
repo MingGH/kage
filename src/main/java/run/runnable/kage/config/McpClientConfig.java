@@ -4,18 +4,24 @@ import io.modelcontextprotocol.client.McpAsyncClient;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.transport.WebClientStreamableHttpTransport;
 import io.modelcontextprotocol.spec.McpSchema;
+import io.netty.channel.ChannelOption;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.handler.timeout.WriteTimeoutHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 自定义 MCP Client 配置，添加 Authorization header 支持
@@ -37,8 +43,17 @@ public class McpClientConfig {
         log.info("创建自定义 Jina MCP Client，API Key: {}...", 
                 jinaApiKey.length() > 10 ? jinaApiKey.substring(0, 10) : "未配置");
 
+        // 配置 Netty HttpClient 超时
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
+                .responseTimeout(Duration.ofSeconds(120))
+                .doOnConnected(conn -> conn
+                        .addHandlerLast(new ReadTimeoutHandler(120, TimeUnit.SECONDS))
+                        .addHandlerLast(new WriteTimeoutHandler(30, TimeUnit.SECONDS)));
+
         // 创建带 Authorization header 的 WebClient Builder
         WebClient.Builder webClientBuilder = WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .baseUrl("https://mcp.jina.ai")
                 .filter(addAuthorizationHeader());
 
@@ -50,7 +65,7 @@ public class McpClientConfig {
         // 创建异步 MCP Client
         McpAsyncClient client = McpClient.async(transport)
                 .clientInfo(new McpSchema.Implementation("kage-bot", "1.0.0"))
-                .requestTimeout(Duration.ofSeconds(30))
+                .requestTimeout(Duration.ofSeconds(120))
                 .build();
 
         // 初始化连接
