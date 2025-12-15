@@ -8,7 +8,10 @@ import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.stereotype.Component;
+
+import java.time.Duration;
 
 @Slf4j
 @Component
@@ -18,19 +21,34 @@ public class MemberJoinListener extends ListenerAdapter {
     // 可以改成从配置或数据库读取
     private static final String DEFAULT_ROLE_NAME = "成员";
     private static final String WELCOME_CHANNEL_NAME = "welcome";
+    private static final String WELCOME_KEY_PREFIX = "kage:welcome:";
+    private static final Duration WELCOME_DEDUP_TTL = Duration.ofMinutes(5);
+    
+    private final ReactiveStringRedisTemplate redisTemplate;
 
     @Override
     public void onGuildMemberJoin(GuildMemberJoinEvent event) {
         Guild guild = event.getGuild();
         Member member = event.getMember();
-
-        log.info("新成员加入 - 服务器: {}, 用户: {}", guild.getName(), member.getUser().getName());
-
-        // 给予默认身份组
-        assignDefaultRole(guild, member);
-
-        // 发送欢迎消息
-        sendWelcomeMessage(guild, member);
+        
+        String dedupKey = WELCOME_KEY_PREFIX + guild.getId() + ":" + member.getId();
+        
+        // 使用 Redis 去重，防止多实例重复发送
+        redisTemplate.opsForValue()
+                .setIfAbsent(dedupKey, "1", WELCOME_DEDUP_TTL)
+                .subscribe(success -> {
+                    if (Boolean.TRUE.equals(success)) {
+                        log.info("新成员加入 - 服务器: {}, 用户: {}", guild.getName(), member.getUser().getName());
+                        
+                        // 给予默认身份组
+                        assignDefaultRole(guild, member);
+                        
+                        // 发送欢迎消息
+                        sendWelcomeMessage(guild, member);
+                    } else {
+                        log.debug("欢迎消息已被其他实例处理: guildId={}, userId={}", guild.getId(), member.getId());
+                    }
+                });
     }
 
     private void assignDefaultRole(Guild guild, Member member) {

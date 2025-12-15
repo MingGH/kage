@@ -22,6 +22,7 @@ import run.runnable.kage.command.CommandRegistry;
 import run.runnable.kage.domain.ChatMessage;
 import run.runnable.kage.repository.ChatMessageRepository;
 import run.runnable.kage.service.tool.ChannelHistoryTool;
+import run.runnable.kage.service.tool.CurrentTimeTool;
 
 import org.springframework.beans.factory.annotation.Value;
 
@@ -51,6 +52,7 @@ public class DeepSeekService {
     private final String systemPromptTemplate;
     private final String mcpToolsDescription;
     private final ChannelHistoryTool channelHistoryTool;
+    private final CurrentTimeTool currentTimeTool;
     
     @Lazy
     @Autowired
@@ -60,11 +62,13 @@ public class DeepSeekService {
                            ChatMessageRepository chatMessageRepository,
                            @Lazy McpAsyncClient mcpAsyncClient,
                            ChannelHistoryTool channelHistoryTool,
+                           CurrentTimeTool currentTimeTool,
                            ReactiveStringRedisTemplate redisTemplate,
                            @Value("${ai.system-prompt}") String systemPromptTemplate) {
         this.systemPromptTemplate = systemPromptTemplate;
         this.chatMessageRepository = chatMessageRepository;
         this.channelHistoryTool = channelHistoryTool;
+        this.currentTimeTool = currentTimeTool;
         this.redisTemplate = redisTemplate;
         
         List<ToolCallback> toolList = new ArrayList<>();
@@ -94,6 +98,7 @@ public class DeepSeekService {
         
         // 添加内置工具描述
         toolDescBuilder.append("- getRecentChannelMessages: 查询当前频道最近的聊天记录\n");
+        toolDescBuilder.append("- getCurrentTime: 获取当前时间\n");
         
         this.mcpToolsDescription = toolDescBuilder.length() > 0 ? toolDescBuilder.toString() : "暂无可用工具";
         this.allTools = toolList.toArray(new ToolCallback[0]);
@@ -101,7 +106,7 @@ public class DeepSeekService {
         // 构建带工具的 ChatClient（内置工具通过 @Tool 注解自动注册）
         this.chatClient = chatClientBuilder
                 .defaultToolCallbacks(allTools)
-                .defaultTools(channelHistoryTool)
+                .defaultTools(channelHistoryTool, currentTimeTool)
                 .build();
     }
 
@@ -125,10 +130,7 @@ public class DeepSeekService {
     }
 
     private String getSystemPrompt() {
-        String currentTime = LocalDateTime.now(ZoneId.of("Asia/Shanghai"))
-                .format(DateTimeFormatter.ofPattern("yyyy年M月d日 EEEE HH:mm", Locale.CHINESE));
         return systemPromptTemplate
-                .replace("{time}", currentTime)
                 .replace("{commands}", commandRegistry.getCommandListText())
                 .replace("{tools}", mcpToolsDescription);
     }
