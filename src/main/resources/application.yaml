@@ -93,6 +93,15 @@ discord:
   bot:
     token: ${DISCORD_BOT_TOKEN:}
     activity: ${DISCORD_ACTIVITY:Kage Bot is running!}
+  welcome:
+    enabled: true
+    channel-name: welcome
+    default-role-name: 见习忍
+    message: |
+      🎉 欢迎 {mention} 加入 **{server}**！
+      
+      希望你在这里玩得开心～ 有问题可以随时 @我 哦！
+      输入 `/help` 或 `@布布 help` 查看我能做什么 😊
 
 
 # 日志配置 (调试时可开启)

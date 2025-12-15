@@ -1,6 +1,5 @@
 package run.runnable.kage.listener;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
@@ -8,6 +7,7 @@ import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -15,19 +15,36 @@ import java.time.Duration;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class MemberJoinListener extends ListenerAdapter {
 
-    // 可以改成从配置或数据库读取
-    private static final String DEFAULT_ROLE_NAME = "成员";
-    private static final String WELCOME_CHANNEL_NAME = "welcome";
     private static final String WELCOME_KEY_PREFIX = "kage:welcome:";
     private static final Duration WELCOME_DEDUP_TTL = Duration.ofMinutes(5);
     
     private final ReactiveStringRedisTemplate redisTemplate;
+    private final boolean welcomeEnabled;
+    private final String welcomeChannelName;
+    private final String defaultRoleName;
+    private final String welcomeMessage;
+
+    public MemberJoinListener(
+            ReactiveStringRedisTemplate redisTemplate,
+            @Value("${discord.welcome.enabled:true}") boolean welcomeEnabled,
+            @Value("${discord.welcome.channel-name:welcome}") String welcomeChannelName,
+            @Value("${discord.welcome.default-role-name:}") String defaultRoleName,
+            @Value("${discord.welcome.message:}") String welcomeMessage) {
+        this.redisTemplate = redisTemplate;
+        this.welcomeEnabled = welcomeEnabled;
+        this.welcomeChannelName = welcomeChannelName;
+        this.defaultRoleName = defaultRoleName;
+        this.welcomeMessage = welcomeMessage;
+    }
 
     @Override
     public void onGuildMemberJoin(GuildMemberJoinEvent event) {
+        if (!welcomeEnabled) {
+            return;
+        }
+        
         Guild guild = event.getGuild();
         Member member = event.getMember();
         
@@ -52,7 +69,11 @@ public class MemberJoinListener extends ListenerAdapter {
     }
 
     private void assignDefaultRole(Guild guild, Member member) {
-        Role role = guild.getRolesByName(DEFAULT_ROLE_NAME, true).stream().findFirst().orElse(null);
+        if (defaultRoleName == null || defaultRoleName.isBlank()) {
+            return;
+        }
+        
+        Role role = guild.getRolesByName(defaultRoleName, true).stream().findFirst().orElse(null);
 
         if (role != null) {
             guild.addRoleToMember(member, role).queue(
@@ -60,25 +81,27 @@ public class MemberJoinListener extends ListenerAdapter {
                     error -> log.error("添加身份组失败: {}", error.getMessage())
             );
         } else {
-            log.warn("找不到默认身份组: {}", DEFAULT_ROLE_NAME);
+            log.warn("找不到默认身份组: {}", defaultRoleName);
         }
     }
 
     private void sendWelcomeMessage(Guild guild, Member member) {
-        // 优先找 welcome 频道，找不到就用系统频道
-        TextChannel channel = guild.getTextChannelsByName(WELCOME_CHANNEL_NAME, true)
+        if (welcomeMessage == null || welcomeMessage.isBlank()) {
+            return;
+        }
+        
+        // 优先找配置的频道，找不到就用系统频道
+        TextChannel channel = guild.getTextChannelsByName(welcomeChannelName, true)
                 .stream().findFirst()
                 .orElse(guild.getSystemChannel());
 
         if (channel != null) {
-            String welcomeMsg = String.format("""
-                    🎉 欢迎 %s 加入 **%s**！
-                    
-                    希望你在这里玩得开心～ 有问题可以随时 @我 哦！
-                    输入 `/help` 或 `@布布 help` 查看我能做什么 😊
-                    """, member.getAsMention(), guild.getName());
+            String msg = welcomeMessage
+                    .replace("{mention}", member.getAsMention())
+                    .replace("{server}", guild.getName())
+                    .replace("{user}", member.getUser().getName());
 
-            channel.sendMessage(welcomeMsg).queue();
+            channel.sendMessage(msg).queue();
         } else {
             log.warn("找不到欢迎频道，服务器: {}", guild.getName());
         }
