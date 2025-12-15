@@ -20,6 +20,9 @@
 ### 基于 AI + Jina MCP 服务联网搜索
 ![](https://img.996.ninja/ninjutsu/878d2a48da82c83d00169148a87404d5.png)
 
+### Tarot Card Reading
+![](https://img.996.ninja/ninjutsu/9abae8a686d3eb9b807dd4ac8d1fbcee.png)
+
 ### 播放音乐
 ![](https://img.996.ninja/ninjutsu/225e932f6c5ba8dde38dbfa0a0803fbf.png)
 
@@ -198,9 +201,19 @@ psql -U postgres -d kage -f sql/poll.sql
 java -jar target/kage-*.jar
 ```
 
-## MCP 工具列表
+## AI 工具列表
 
-通过 Jina MCP 集成，AI 可以使用以下工具：
+AI 可以根据需要自动调用以下工具：
+
+### 内置工具
+
+| 工具 | 说明 |
+|------|------|
+| `getRecentChannelMessages` | 查询当前频道最近的聊天记录 |
+| `getCurrentTime` | 获取当前时间 |
+| `drawTarotCards` | 塔罗牌占卜 |
+
+### Jina MCP 工具（联网搜索）
 
 | 工具 | 说明 |
 |------|------|

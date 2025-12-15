@@ -20,6 +20,9 @@ A feature-rich Discord bot built with Spring Boot WebFlux, featuring AI conversa
 ### AI + Jina MCP Web Search
 ![](https://img.996.ninja/ninjutsu/878d2a48da82c83d00169148a87404d5.png)
 
+### Tarot Card Reading
+![](https://img.996.ninja/ninjutsu/9abae8a686d3eb9b807dd4ac8d1fbcee.png)
+
 ### Play Music
 ![](https://img.996.ninja/ninjutsu/225e932f6c5ba8dde38dbfa0a0803fbf.png)
 
@@ -198,9 +201,19 @@ psql -U postgres -d kage -f sql/poll.sql
 java -jar target/kage-*.jar
 ```
 
-## MCP Tools
+## AI Tools
 
-AI can use the following tools via Jina MCP integration:
+AI can automatically use the following tools when needed:
+
+### Built-in Tools
+
+| Tool | Description |
+|------|-------------|
+| `getRecentChannelMessages` | Query recent chat history in current channel |
+| `getCurrentTime` | Get current time |
+| `drawTarotCards` | Tarot card reading |
+
+### Jina MCP Tools (Web Search)
 
 | Tool | Description |
 |------|-------------|
