@@ -152,8 +152,8 @@ public class CountdownService {
         // 扫描所有倒计时 key
         redisTemplate.keys(COUNTDOWN_KEY_PREFIX + "*")
                 .flatMap(key -> redisTemplate.opsForValue().get(key)
-                        .map(value -> new String[]{key, value}))
-                .doFinally(signal -> redisTemplate.delete(SCHEDULE_LOCK_KEY).subscribe())
+                        .map(value -> new String[]{key, value})
+                )
                 .subscribe(pair -> {
                     try {
                         String key = pair[0];
