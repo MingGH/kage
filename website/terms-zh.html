@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务条款 | KAGE</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/main.css">
+    <style>
+        .page-content {
+            padding: 8rem 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            margin-bottom: 2rem;
+            color: var(--ninja-cyan);
+        }
+        h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--ninja-red);
+        }
+        p, ul {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+        ul {
+            padding-left: 2rem;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 2rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-family: 'Orbitron', sans-serif;
+            transition: color 0.3s;
+        }
+        .back-link:hover {
+            color: var(--ninja-cyan);
+        }
+    </style>
+</head>
+<body>
+    <div id="cursor" class="cursor">
+        <div class="cursor-circle"></div>
+        <div class="cursor-dot"></div>
+    </div>
+
+    <canvas id="webgl-bg"></canvas>
+    <div class="noise-overlay"></div>
+
+    <nav class="hud-nav">
+        <div class="logo">
+            <span class="kanji">影</span>
+            <span class="text">KAGE</span>
+        </div>
+        <div class="actions">
+            <a href="index.html" class="github-btn">返回基地</a>
+        </div>
+    </nav>
+
+    <div class="page-content">
+        <a href="index.html" class="back-link">← 返回影之领域</a>
+        <h1>服务条款</h1>
+        <p>最后更新：2025年12月</p>
+
+        <h2>1. 条款接受</h2>
+        <p>当您将 Kage（"机器人"）邀请到您的 Discord 服务器或使用其功能时，即表示您同意本服务条款。如果您不同意，请将机器人从您的服务器中移除。</p>
+
+        <h2>2. 使用许可</h2>
+        <p>Kage 按"原样"提供，仅供在 Discord 平台上进行个人和非商业用途使用。您不得尝试逆向工程、复制或利用机器人的代码或资源。</p>
+
+        <h2>3. 用户行为</h2>
+        <p>您同意不将 Kage 用于：</p>
+        <ul>
+            <li>任何非法活动或推广非法行为。</li>
+            <li>骚扰、仇恨言论或滥用其他用户。</li>
+            <li>滥发命令或故意造成延迟/停机。</li>
+        </ul>
+
+        <h2>4. 数据与隐私</h2>
+        <p>您对 Kage 的使用也受我们隐私政策的约束。我们仅收集功能所需的最少数据。</p>
+
+        <h2>5. 责任限制</h2>
+        <p>Kage 的开发者不对因使用或无法使用机器人而产生的任何损害承担责任。</p>
+        
+        <h2>6. 联系方式</h2>
+        <p>如需支持，请加入我们的 Discord 服务器。</p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

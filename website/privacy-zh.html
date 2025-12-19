@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>隐私政策 | KAGE</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/main.css">
+    <style>
+        .page-content {
+            padding: 8rem 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            margin-bottom: 2rem;
+            color: var(--ninja-cyan);
+        }
+        h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--ninja-red);
+        }
+        p, ul {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+        ul {
+            padding-left: 2rem;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 2rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-family: 'Orbitron', sans-serif;
+            transition: color 0.3s;
+        }
+        .back-link:hover {
+            color: var(--ninja-cyan);
+        }
+    </style>
+</head>
+<body>
+    <div id="cursor" class="cursor">
+        <div class="cursor-circle"></div>
+        <div class="cursor-dot"></div>
+    </div>
+
+    <canvas id="webgl-bg"></canvas>
+    <div class="noise-overlay"></div>
+
+    <nav class="hud-nav">
+        <div class="logo">
+            <span class="kanji">影</span>
+            <span class="text">KAGE</span>
+        </div>
+        <div class="actions">
+            <a href="index.html" class="github-btn">返回基地</a>
+        </div>
+    </nav>
+
+    <div class="page-content">
+        <a href="index.html" class="back-link">← 返回影之领域</a>
+        <h1>隐私政策</h1>
+        <p>最后更新：2025年12月</p>
+
+        <h2>1. 我们收集的信息</h2>
+        <p>Kage 收集以下数据以正常运行：</p>
+        <ul>
+            <li><strong>用户 ID：</strong>用于识别用户以执行命令、经济系统和权限管理。</li>
+            <li><strong>服务器 ID：</strong>用于存储服务器特定配置（前缀、欢迎消息）。</li>
+            <li><strong>命令使用情况：</strong>我们匿名记录命令使用情况以改进性能。</li>
+        </ul>
+
+        <h2>2. 我们如何使用信息</h2>
+        <p>数据仅用于：</p>
+        <ul>
+            <li>执行请求的命令。</li>
+            <li>维护经济系统（积分、库存）。</li>
+            <li>防止滥用并确保安全。</li>
+        </ul>
+
+        <h2>3. 数据存储</h2>
+        <p>所有数据都安全存储在加密服务器上。我们不会向第三方出售或分享您的数据。</p>
+
+        <h2>4. 您的权利</h2>
+        <p>您有权请求删除您的数据。如需删除，请加入我们的支持服务器并提交工单。</p>
+        
+        <h2>5. 变更</h2>
+        <p>我们可能会定期更新本政策。继续使用机器人即表示接受变更。</p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

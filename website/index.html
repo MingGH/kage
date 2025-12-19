@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="no-js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Kage (影) - The Ultimate Ninja Steward Bot for Discord. Stealthy, Powerful, Loyal.">
+    <meta name="theme-color" content="#0a0a0f">
+    <title>KAGE | 影之家令</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Orbitron:wght@400;700;900&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/main.css">
+    
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/typewriter-effect@latest/dist/core.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+</head>
+<body class="loading">
+
+    <!-- Custom Cursor -->
+    <div id="cursor" class="cursor">
+        <div class="cursor-circle"></div>
+        <div class="cursor-dot"></div>
+    </div>
+
+    <!-- Intro / Loading Sequence -->
+    <div id="intro">
+        <div class="intro-panel left"></div>
+        <div class="intro-panel right"></div>
+        <div class="intro-content">
+            <h1 class="glitch" data-text="KAGE">KAGE</h1>
+            <div class="loader-line"></div>
+        </div>
+    </div>
+
+    <!-- Background WebGL/Canvas -->
+    <canvas id="webgl-bg"></canvas>
+    <div class="noise-overlay"></div>
+
+    <!-- Navigation (HUD Style) -->
+    <nav class="hud-nav">
+        <div class="logo">
+            <span class="kanji">影</span>
+            <span class="text">KAGE</span>
+        </div>
+        <div class="links">
+            <a href="#home" class="nav-item" data-text="BASE" data-i18n="nav.base">BASE</a>
+            <a href="#features" class="nav-item" data-text="SCROLLS" data-i18n="nav.features">SCROLLS</a>
+            <a href="#commands" class="nav-item" data-text="JUTSU" data-i18n="nav.commands">JUTSU</a>
+        </div>
+        <div class="actions">
+            <button id="lang-switch" class="lang-btn">CN / EN</button>
+            <a href="https://discord.gg/2kVEhKpx" target="_blank" class="github-btn" title="Join Support Server">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </a>
+            <a href="https://github.com/MingGH/kage" target="_blank" class="github-btn" title="View Source">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+            </a>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Hero Section -->
+        <section id="home" class="section hero">
+            <div class="hero-content">
+                <div class="hero-text-wrapper">
+                    <h2 class="hero-subtitle" data-i18n="hero.subtitle">SHADOW STEWARD</h2>
+                    <h1 class="hero-title glitch-layer" data-text="KAGEI" data-i18n="hero.title" data-i18n-target="data-text">KAGEI</h1>
+                    <p class="hero-desc" data-i18n="hero.desc">The Silent Guardian for Your Discord Realm.</p>
+                </div>
+                <div class="hero-cta">
+                    <a href="https://discord.com/oauth2/authorize?client_id=1449365950947266670" target="_blank" class="cyber-btn">
+                        <span class="btn-content" data-i18n="hero.cta">SUMMON KAGE</span>
+                        <span class="btn-glitch"></span>
+                    </a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div id="hero-model-container"></div>
+            </div>
+            
+            <div class="scroll-indicator">
+                <span data-i18n="hero.scroll">SCROLL</span>
+                <div class="line"></div>
+            </div>
+        </section>
+
+        <!-- Features Section (Scrolls) -->
+        <section id="features" class="section features">
+            <div class="section-header">
+                <h2 class="section-title" data-text="HIDDEN SCROLLS" data-i18n="features.title" data-i18n-target="data-text">HIDDEN SCROLLS</h2>
+                <div class="section-line"></div>
+            </div>
+            
+            <div class="feature-grid">
+                <div class="feature-card" data-tilt>
+                    <div class="card-icon">🧠</div>
+                    <h3 data-i18n="features.guardian.title">Intelligence</h3>
+                    <p data-i18n="features.guardian.desc">Powered by DeepSeek & Jina MCP for real-time web search.</p>
+                    <div class="card-border"></div>
+                </div>
+                <div class="feature-card" data-tilt>
+                    <div class="card-icon">🎵</div>
+                    <h3 data-i18n="features.melody.title">Melody</h3>
+                    <p data-i18n="features.melody.desc">High-fidelity music playback with seamless streaming.</p>
+                    <div class="card-border"></div>
+                </div>
+                <div class="feature-card" data-tilt>
+                    <div class="card-icon">🔮</div>
+                    <h3 data-i18n="features.economy.title">Fortune</h3>
+                    <p data-i18n="features.economy.desc">Tarot reading, Daily Fortune, and Lottery system.</p>
+                    <div class="card-border"></div>
+                </div>
+                <div class="feature-card" data-tilt>
+                    <div class="card-icon">🛠️</div>
+                    <h3 data-i18n="features.entertainment.title">Tools</h3>
+                    <p data-i18n="features.entertainment.desc">Polls, Off-work Countdowns, and Reminders.</p>
+                    <div class="card-border"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Commands Section (Jutsu) -->
+        <section id="commands" class="section commands">
+            <div class="section-header">
+                <h2 class="section-title" data-text="SECRET JUTSU" data-i18n="commands.title" data-i18n-target="data-text">SECRET JUTSU</h2>
+                <div class="section-line"></div>
+            </div>
+
+            <div class="terminal-wrapper">
+                <div class="terminal-header">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                    <span class="terminal-title">kage_discord_bot</span>
+                </div>
+                <div class="terminal-body">
+                    <div class="command-line">
+                        <span class="prompt">user@kage:~$</span>
+                        <span id="typewriter"></span>
+                    </div>
+                    <div class="output-grid" id="command-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-logo">影</div>
+                <p>&copy; 2025 Kage Project. All Rights Reserved.</p>
+                <div class="footer-links">
+                    <a href="terms.html" data-i18n="footer.terms" data-href-en="terms.html" data-href-zh="terms-zh.html">Terms</a>
+                    <a href="privacy.html" data-i18n="footer.privacy" data-href-en="privacy.html" data-href-zh="privacy-zh.html">Privacy</a>
+                </div>
+            </div>
+        </footer>
+    </main>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

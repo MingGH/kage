@@ -1,0 +1,688 @@
+/* ============================================
+   Kage (影) - Main Stylesheet
+   Design: Cyber Ninja / Shadow Steward
+   ============================================ */
+
+/* === Reset & Base === */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    font-size: 16px;
+    background-color: var(--ninja-black);
+    overflow-x: hidden;
+}
+
+body {
+    font-family: 'Noto Sans JP', sans-serif;
+    color: var(--text-primary);
+    overflow-x: hidden;
+    min-height: 100vh;
+    position: relative;
+}
+
+body.loading {
+    overflow: hidden;
+}
+
+/* === Custom Cursor === */
+#cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 40px;
+    height: 40px;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    mix-blend-mode: difference;
+}
+
+.cursor-circle {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 1px solid var(--ninja-cyan);
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+}
+
+.cursor-dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    background: var(--ninja-red);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* === Intro Sequence === */
+#intro {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: pointer-events 0.5s;
+}
+
+body.loaded #intro {
+    pointer-events: none;
+}
+
+.intro-panel {
+    position: absolute;
+    top: 0;
+    width: 50%;
+    height: 100%;
+    background: var(--ninja-black);
+    z-index: 1;
+    transition: transform 1s cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+.intro-panel.left {
+    left: 0;
+    border-right: 1px solid var(--ninja-purple);
+}
+
+.intro-panel.right {
+    right: 0;
+    border-left: 1px solid var(--ninja-purple);
+}
+
+body.loaded .intro-panel.left {
+    transform: translateX(-100%);
+}
+
+body.loaded .intro-panel.right {
+    transform: translateX(100%);
+}
+
+.intro-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: opacity 0.5s ease;
+}
+
+body.loaded .intro-content {
+    opacity: 0;
+}
+
+.loader-line {
+    width: 0;
+    height: 2px;
+    background: var(--ninja-cyan);
+    margin-top: 20px;
+    animation: loadLine 2s ease-in-out forwards;
+}
+
+@keyframes loadLine {
+    0% { width: 0; }
+    100% { width: 200px; }
+}
+
+/* === Backgrounds === */
+#webgl-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -2;
+}
+
+.noise-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    pointer-events: none;
+}
+
+/* === Navigation HUD === */
+.hud-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 2rem 4rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    background: rgba(10, 10, 15, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+}
+
+.logo .kanji {
+    color: var(--ninja-red);
+}
+
+.links {
+    display: flex;
+    gap: 3rem;
+}
+
+.nav-item {
+    position: relative;
+    text-decoration: none;
+    color: var(--text-primary);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    overflow: hidden;
+    padding: 0.5rem 0;
+}
+
+.nav-item::before {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    color: var(--ninja-cyan);
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+}
+
+.nav-item:hover::before {
+    transform: translateY(0);
+}
+
+.nav-item span {
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+.nav-item:hover span {
+    transform: translateY(-100%);
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.lang-btn {
+    background: none;
+    border: 1px solid var(--ninja-cyan);
+    color: var(--ninja-cyan);
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+.lang-btn:hover {
+    background: rgba(0, 255, 255, 0.1);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+.github-btn {
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 0 0 transparent);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.github-btn:hover {
+    color: var(--ninja-cyan);
+    filter: drop-shadow(0 0 8px var(--ninja-cyan));
+    transform: scale(1.1) rotate(5deg);
+}
+
+::selection {
+    background: var(--ninja-red);
+    color: #fff;
+}
+
+/* === Hero Section === */
+.section {
+    min-height: 100vh;
+    padding: 6rem 4rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+}
+
+.hero {
+    align-items: flex-start;
+}
+
+.hero-content {
+    max-width: 800px;
+    z-index: 10;
+}
+
+.hero-subtitle {
+    font-family: 'Syncopate', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 4px;
+    color: var(--ninja-cyan);
+    margin-bottom: 1rem;
+}
+
+.hero-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 8rem;
+    line-height: 1;
+    font-weight: 900;
+    margin-bottom: 2rem;
+    position: relative;
+    color: var(--text-primary);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+/* Glitch Effect */
+.glitch-layer {
+    position: relative;
+}
+
+.glitch-layer::before,
+.glitch-layer::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--ninja-black);
+}
+
+.glitch-layer::before {
+    left: 2px;
+    text-shadow: -1px 0 var(--ninja-red);
+    clip: rect(44px, 450px, 56px, 0);
+    animation: glitch-anim 5s infinite linear alternate-reverse;
+}
+
+.glitch-layer::after {
+    left: -2px;
+    text-shadow: -1px 0 var(--ninja-cyan);
+    clip: rect(44px, 450px, 56px, 0);
+    animation: glitch-anim 5s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim {
+    0% { clip: rect(2px, 9999px, 5px, 0); }
+    5% { clip: rect(45px, 9999px, 16px, 0); }
+    10% { clip: rect(12px, 9999px, 78px, 0); }
+    15% { clip: rect(89px, 9999px, 12px, 0); }
+    20% { clip: rect(23px, 9999px, 67px, 0); }
+    25% { clip: rect(67px, 9999px, 34px, 0); }
+    30% { clip: rect(2px, 9999px, 89px, 0); }
+    35% { clip: rect(45px, 9999px, 2px, 0); }
+    40% { clip: rect(9px, 9999px, 56px, 0); }
+    45% { clip: rect(78px, 9999px, 23px, 0); }
+    50% { clip: rect(12px, 9999px, 67px, 0); }
+    55% { clip: rect(56px, 9999px, 12px, 0); }
+    60% { clip: rect(34px, 9999px, 89px, 0); }
+    65% { clip: rect(89px, 9999px, 34px, 0); }
+    70% { clip: rect(23px, 9999px, 56px, 0); }
+    75% { clip: rect(67px, 9999px, 12px, 0); }
+    80% { clip: rect(12px, 9999px, 78px, 0); }
+    85% { clip: rect(45px, 9999px, 34px, 0); }
+    90% { clip: rect(89px, 9999px, 56px, 0); }
+    95% { clip: rect(23px, 9999px, 12px, 0); }
+    100% { clip: rect(67px, 9999px, 45px, 0); }
+}
+
+.hero-desc {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    max-width: 500px;
+    margin-bottom: 3rem;
+    border-left: 2px solid var(--ninja-red);
+    padding-left: 1rem;
+}
+
+/* Cyber Button */
+.cyber-btn {
+    position: relative;
+    display: inline-flex;
+    padding: 1rem 2rem;
+    background: transparent;
+    border: 1px solid var(--ninja-cyan);
+    color: var(--ninja-cyan);
+    text-decoration: none;
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 2px;
+    overflow: hidden;
+    transition: 0.3s;
+}
+
+.cyber-btn:hover {
+    background: rgba(0, 255, 255, 0.1);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+    text-shadow: 0 0 8px var(--ninja-cyan);
+}
+
+.btn-glitch {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--ninja-cyan);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: -1;
+}
+
+.scroll-indicator {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    font-family: 'Syncopate', sans-serif;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.scroll-indicator .line {
+    width: 1px;
+    height: 50px;
+    background: linear-gradient(to bottom, var(--ninja-cyan), transparent);
+}
+
+/* === Features Section (Scrolls) === */
+.features {
+    align-items: center;
+}
+
+.section-header {
+    margin-bottom: 4rem;
+    text-align: center;
+    position: relative;
+}
+
+.section-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 3rem;
+    font-weight: 900;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--text-primary);
+    position: relative;
+}
+
+.section-title::before {
+    content: attr(data-text);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    color: var(--text-primary);
+    clip-path: polygon(0 0, 100% 0, 100% 50%, 0 50%);
+    transform: translateY(-5px);
+    transition: transform 0.3s ease;
+}
+
+.section-title:hover::before {
+    transform: translateY(0);
+}
+
+.section-line {
+    width: 100px;
+    height: 4px;
+    background: var(--ninja-red);
+    margin: 1rem auto;
+    box-shadow: 0 0 10px var(--ninja-red);
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+    width: 100%;
+    max-width: 1200px;
+}
+
+@media (max-width: 1024px) {
+    .feature-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .feature-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.feature-card {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    backdrop-filter: blur(10px);
+    transition: transform 0.3s ease;
+    transform-style: preserve-3d;
+}
+
+.feature-card:hover {
+    border-color: var(--ninja-cyan);
+}
+
+.card-icon {
+    font-size: 3rem;
+    margin-bottom: 1.5rem;
+    transform: translateZ(20px);
+}
+
+.feature-card h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    transform: translateZ(30px);
+}
+
+.feature-card p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    transform: translateZ(20px);
+}
+
+.card-border {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--ninja-cyan);
+    transition: width 0.3s ease;
+}
+
+.feature-card:hover .card-border {
+    width: 100%;
+}
+
+/* === Commands Section (Jutsu) === */
+.commands {
+    justify-content: center;
+    align-items: center;
+}
+
+.terminal-wrapper {
+    width: 100%;
+    max-width: 900px;
+    background: rgba(10, 10, 15, 0.9);
+    border: 1px solid #333;
+    border-radius: 8px;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+.terminal-header {
+    background: #1a1a1a;
+    padding: 0.8rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid #333;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.dot.red { background: #ff5f56; }
+.dot.yellow { background: #ffbd2e; }
+.dot.green { background: #27c93f; }
+
+.terminal-title {
+    margin-left: 1rem;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.terminal-body {
+    padding: 2rem;
+    font-family: 'Fira Code', monospace;
+    min-height: 400px;
+}
+
+.command-line {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    font-size: 1.2rem;
+}
+
+.prompt {
+    color: var(--ninja-cyan);
+}
+
+#typewriter {
+    color: var(--text-primary);
+}
+
+.output-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.cmd-item {
+    padding: 0.5rem;
+    border-left: 2px solid var(--ninja-purple);
+    padding-left: 1rem;
+    opacity: 0;
+    animation: fadeIn 0.5s forwards;
+}
+
+.cmd-name {
+    color: var(--ninja-red);
+    font-weight: bold;
+    margin-right: 0.5rem;
+}
+
+.cmd-desc {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
+
+/* === Footer === */
+.footer {
+    padding: 4rem 2rem;
+    background: var(--ninja-black);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    text-align: center;
+}
+
+.footer-logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.footer-links {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+}
+
+.footer-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.3s;
+}
+
+.footer-links a:hover {
+    color: var(--ninja-cyan);
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 4rem;
+    }
+    
+    .hud-nav {
+        padding: 1.5rem;
+    }
+    
+    .links {
+        display: none; /* Mobile menu needed if strictly required, for now hiding */
+    }
+    
+    .section {
+        padding: 4rem 1.5rem;
+    }
+    
+    .output-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -25,7 +25,7 @@ public class TarotTool {
                 .baseUrl(TAROT_API_URL)
                 .build();
     }
-
+ 
     @Tool(description = "进行塔罗牌占卜。当用户想要占卜、抽塔罗牌、算命、看运势时使用此工具。返回塔罗牌名称，AI需要根据牌面含义进行解读。")
     public String drawTarotCards(
             @ToolParam(description = "抽取的塔罗牌数量，默认1张，最少1张，最多3张") Integer count

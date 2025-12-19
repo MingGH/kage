@@ -1,0 +1,370 @@
+/* ============================================
+   Kage Bot Landing Page - Theme Variables
+   影之家令 · Your Shadow Butler
+   
+   This file contains all theme-related CSS
+   custom properties and ninja-style utilities
+   ============================================ */
+
+/* ============================================
+   Core Theme Variables
+   ============================================ */
+:root {
+    /* === Primary Colors - Ninja Theme === */
+    --ninja-purple: #1a0a2e;         /* 深紫 - Deep Purple */
+    --ninja-black: #0d0d0d;          /* 忍者黑 - Ninja Black */
+    --ninja-red: #ff3366;            /* 霓虹红 - Neon Red */
+    --ninja-cyan: #00ffff;           /* 青光 - Cyan Glow */
+    
+    /* === Extended Color Palette === */
+    --ninja-dark: #0a0a0f;
+    --ninja-purple-light: #2d1b4e;
+    --ninja-purple-dark: #120820;
+    --ninja-red-dark: #cc2952;
+    --ninja-cyan-dark: #00cccc;
+    --ninja-gold: #ffd700;
+    --ninja-silver: #c0c0c0;
+    
+    /* === Semantic Colors === */
+    --color-background: var(--ninja-black);
+    --color-surface: var(--ninja-purple);
+    --color-primary: var(--ninja-cyan);
+    --color-secondary: var(--ninja-red);
+    --color-accent: var(--ninja-gold);
+    
+    /* === Text Colors === */
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --text-muted: #888888;
+    --text-disabled: #555555;
+    --text-accent: var(--ninja-cyan);
+    --text-highlight: var(--ninja-red);
+    
+    /* === Gradient Definitions === */
+    --gradient-dark: linear-gradient(135deg, var(--ninja-black) 0%, var(--ninja-purple) 50%, var(--ninja-black) 100%);
+    --gradient-glow: linear-gradient(90deg, var(--ninja-cyan), var(--ninja-red));
+    --gradient-card: linear-gradient(135deg, rgba(26, 10, 46, 0.8) 0%, rgba(13, 13, 13, 0.9) 100%);
+    --gradient-button: linear-gradient(135deg, var(--ninja-red) 0%, var(--ninja-red-dark) 100%);
+    
+    /* === Glow Effects === */
+    --glow-cyan: 0 0 20px rgba(0, 255, 255, 0.5);
+    --glow-cyan-strong: 0 0 40px rgba(0, 255, 255, 0.8);
+    --glow-red: 0 0 20px rgba(255, 51, 102, 0.5);
+    --glow-red-strong: 0 0 40px rgba(255, 51, 102, 0.8);
+    --glow-purple: 0 0 20px rgba(138, 43, 226, 0.5);
+    --glow-text: 0 0 10px currentColor;
+    
+    /* === Border Colors === */
+    --border-default: rgba(255, 255, 255, 0.1);
+    --border-hover: rgba(0, 255, 255, 0.3);
+    --border-active: var(--ninja-cyan);
+    --border-glow: rgba(0, 255, 255, 0.2);
+    
+    /* === Shadow Definitions === */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.6);
+    --shadow-glow: 0 0 30px rgba(0, 255, 255, 0.3);
+    
+    /* === Typography === */
+    --font-japanese: 'Noto Serif JP', 'Yu Mincho', serif;
+    --font-chinese: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --font-display: 'Orbitron', var(--font-japanese), sans-serif;
+    --font-body: var(--font-chinese);
+    --font-mono: 'Fira Code', 'Consolas', 'Monaco', monospace;
+    
+    /* Font Sizes */
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 2rem;
+    --text-4xl: 2.5rem;
+    --text-5xl: 3rem;
+    --text-6xl: 4rem;
+    
+    /* Font Weights */
+    --font-normal: 400;
+    --font-medium: 500;
+    --font-semibold: 600;
+    --font-bold: 700;
+    
+    /* Line Heights */
+    --leading-tight: 1.25;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.75;
+    
+    /* Letter Spacing */
+    --tracking-tight: -0.025em;
+    --tracking-normal: 0;
+    --tracking-wide: 0.05em;
+    --tracking-wider: 0.1em;
+    
+    /* === Spacing Scale === */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    --space-20: 5rem;
+    --space-24: 6rem;
+    --space-32: 8rem;
+    
+    /* === Border Radius === */
+    --radius-none: 0;
+    --radius-sm: 0.25rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+    --radius-2xl: 2rem;
+    --radius-full: 9999px;
+    
+    /* === Transitions === */
+    --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-in: cubic-bezier(0.4, 0, 1, 1);
+    --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    
+    --duration-fast: 150ms;
+    --duration-normal: 300ms;
+    --duration-slow: 500ms;
+    --duration-slower: 700ms;
+    
+    /* === Z-Index Scale === */
+    --z-below: -1;
+    --z-base: 0;
+    --z-above: 1;
+    --z-dropdown: 10;
+    --z-sticky: 50;
+    --z-header: 100;
+    --z-overlay: 150;
+    --z-modal: 200;
+    --z-popover: 250;
+    --z-cursor: 300;
+    --z-loading: 400;
+    --z-max: 9999;
+    
+    /* === Breakpoints (for reference) === */
+    --bp-xs: 320px;
+    --bp-sm: 480px;
+    --bp-md: 768px;
+    --bp-lg: 1024px;
+    --bp-xl: 1280px;
+    --bp-2xl: 1536px;
+}
+
+/* ============================================
+   Custom Cursor Styles
+   ============================================ */
+
+/* Kunai cursor for desktop */
+@media (hover: hover) and (pointer: fine) {
+    html {
+        cursor: url('../assets/cursors/kunai.svg') 4 4, auto;
+    }
+    
+    a, button, [role="button"], 
+    input[type="submit"], input[type="button"],
+    .clickable, .cta-btn, .nav-link, .feature-card,
+    .command-tab, .lang-switcher {
+        cursor: url('../assets/cursors/kunai.svg') 4 4, pointer;
+    }
+    
+    input[type="text"], input[type="email"], 
+    input[type="password"], textarea {
+        cursor: text;
+    }
+}
+
+/* ============================================
+   Ninja-Style Utility Classes
+   ============================================ */
+
+/* Glow Effects */
+.glow-cyan {
+    box-shadow: var(--glow-cyan);
+}
+
+.glow-cyan-strong {
+    box-shadow: var(--glow-cyan-strong);
+}
+
+.glow-red {
+    box-shadow: var(--glow-red);
+}
+
+.glow-text {
+    text-shadow: var(--glow-text);
+}
+
+/* Text Gradients */
+.text-gradient {
+    background: var(--gradient-glow);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Ninja Border Animation */
+.ninja-border {
+    position: relative;
+    border: 1px solid var(--border-glow);
+}
+
+.ninja-border::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, var(--ninja-cyan), transparent, var(--ninja-red), transparent);
+    background-size: 400% 400%;
+    z-index: -1;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity var(--duration-normal) var(--ease-default);
+}
+
+.ninja-border:hover::before {
+    opacity: 1;
+    animation: border-flow 3s linear infinite;
+}
+
+@keyframes border-flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Smoke Effect Background */
+.smoke-bg {
+    position: relative;
+    overflow: hidden;
+}
+
+.smoke-bg::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(ellipse at 20% 80%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(255, 51, 102, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+    animation: smoke-drift 10s ease-in-out infinite;
+}
+
+@keyframes smoke-drift {
+    0%, 100% { transform: translateX(0) translateY(0); }
+    25% { transform: translateX(10px) translateY(-10px); }
+    50% { transform: translateX(-5px) translateY(5px); }
+    75% { transform: translateX(-10px) translateY(-5px); }
+}
+
+/* Shuriken Spin Animation */
+.shuriken-spin {
+    animation: shuriken-rotate 2s linear infinite;
+}
+
+@keyframes shuriken-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Ink Spread Animation */
+.ink-spread {
+    animation: ink-expand 1.5s ease-out forwards;
+}
+
+@keyframes ink-expand {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+        filter: blur(20px);
+    }
+    50% {
+        opacity: 1;
+        filter: blur(5px);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+        filter: blur(0);
+    }
+}
+
+/* Neon Flicker */
+.neon-flicker {
+    animation: neon-pulse 2s ease-in-out infinite;
+}
+
+@keyframes neon-pulse {
+    0%, 100% {
+        text-shadow: 
+            0 0 5px var(--ninja-cyan),
+            0 0 10px var(--ninja-cyan),
+            0 0 20px var(--ninja-cyan);
+    }
+    50% {
+        text-shadow: 
+            0 0 2px var(--ninja-cyan),
+            0 0 5px var(--ninja-cyan),
+            0 0 10px var(--ninja-cyan);
+    }
+}
+
+/* Card Hover Lift */
+.hover-lift {
+    transition: transform var(--duration-normal) var(--ease-out),
+                box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.hover-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-glow);
+}
+
+/* ============================================
+   Dark Theme Overrides
+   ============================================ */
+.dark-theme {
+    color-scheme: dark;
+    background-color: var(--ninja-black);
+    color: var(--text-primary);
+}
+
+/* ============================================
+   Reduced Motion Support
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    
+    .ninja-border::before,
+    .smoke-bg::after {
+        animation: none;
+    }
+    
+    .shuriken-spin,
+    .neon-flicker {
+        animation: none;
+    }
+}
