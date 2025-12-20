@@ -10,6 +10,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
 import run.runnable.kage.config.DiscordConfig;
 import run.runnable.kage.listener.DiscordMessageListener;
+import run.runnable.kage.listener.DoudizhuButtonListener;
 import run.runnable.kage.listener.LotteryButtonListener;
 import run.runnable.kage.listener.MemberJoinListener;
 import run.runnable.kage.listener.PollButtonListener;
@@ -21,6 +22,7 @@ public class DiscordBotService implements CommandLineRunner {
 
     private final DiscordConfig discordConfig;
     private final DiscordMessageListener messageListener;
+    private final DoudizhuButtonListener doudizhuButtonListener;
     private final LotteryButtonListener lotteryButtonListener;
     private final MemberJoinListener memberJoinListener;
     private final PollButtonListener pollButtonListener;
@@ -45,7 +47,7 @@ public class DiscordBotService implements CommandLineRunner {
                             GatewayIntent.DIRECT_MESSAGES,
                             GatewayIntent.GUILD_MEMBERS  // 需要开启才能监听成员加入事件
                     )
-                    .addEventListeners(messageListener, lotteryButtonListener, memberJoinListener, pollButtonListener, slashCommandManager)
+                    .addEventListeners(messageListener, lotteryButtonListener, memberJoinListener, pollButtonListener, doudizhuButtonListener, slashCommandManager)
                     .build();
 
             jda.awaitReady();
