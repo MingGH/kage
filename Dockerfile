@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jre
+FROM ibm-semeru-runtimes:open-17-jre
 
 ARG JAR_NAME
 ENV PROJECT_NAME ${JAR_NAME}
