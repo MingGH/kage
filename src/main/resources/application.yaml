@@ -100,7 +100,7 @@ ai:
 discord:
   bot:
     token: ${DISCORD_BOT_TOKEN:}
-    activity: ${DISCORD_ACTIVITY:Kage Bot is running!}
+    activity: ${DISCORD_ACTIVITY:布布管家做饭中，先摸鱼一会儿!}
   welcome:
     enabled: true
     channel-name: welcome
