@@ -36,11 +36,11 @@ public class HelpCommand implements UnifiedCommand {
 
         sb.append("\n**@提及命令：**\n");
         commands.forEach(cmd ->
-                sb.append("`@布布 ").append(cmd.getName()).append("` - ")
+                sb.append("`@布布管家 ").append(cmd.getName()).append("` - ")
                   .append(cmd.getDescription()).append("\n")
         );
 
-        sb.append("\n💡 也可以直接 @布布 聊天，支持联网搜索~");
+        sb.append("\n💡 也可以直接 @布布管家 聊天，支持联网搜索~");
 
         ctx.reply(sb.toString());
     }
