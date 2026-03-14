@@ -24,6 +24,7 @@ import run.runnable.kage.repository.ChatMessageRepository;
 import run.runnable.kage.service.tool.ChannelHistoryTool;
 import run.runnable.kage.service.tool.CurrentTimeTool;
 import run.runnable.kage.service.tool.LeaderboardTool;
+import run.runnable.kage.service.tool.RagSearchTool;
 import run.runnable.kage.service.tool.TarotTool;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -57,6 +58,7 @@ public class DeepSeekService {
     private final CurrentTimeTool currentTimeTool;
     private final TarotTool tarotTool;
     private final LeaderboardTool leaderboardTool;
+    private final RagSearchTool ragSearchTool;
     
     @Lazy
     @Autowired
@@ -69,6 +71,7 @@ public class DeepSeekService {
                            CurrentTimeTool currentTimeTool,
                            TarotTool tarotTool,
                            LeaderboardTool leaderboardTool,
+                           RagSearchTool ragSearchTool,
                            ReactiveStringRedisTemplate redisTemplate,
                            @Value("${ai.system-prompt}") String systemPromptTemplate) {
         this.systemPromptTemplate = systemPromptTemplate;
@@ -77,6 +80,7 @@ public class DeepSeekService {
         this.currentTimeTool = currentTimeTool;
         this.tarotTool = tarotTool;
         this.leaderboardTool = leaderboardTool;
+        this.ragSearchTool = ragSearchTool;
         this.redisTemplate = redisTemplate;
         
         List<ToolCallback> toolList = new ArrayList<>();
@@ -110,6 +114,7 @@ public class DeepSeekService {
         toolDescBuilder.append("- drawTarotCards: 塔罗牌占卜\n");
         toolDescBuilder.append("- getUserScore: 查询用户的摸鱼积分和排名\n");
         toolDescBuilder.append("- getLeaderboard: 查询摸鱼排行榜\n");
+        toolDescBuilder.append("- ragSearch: 搜索996忍者网站知识库，获取摸鱼技巧、网站功能等相关内容\n");
         
         this.mcpToolsDescription = toolDescBuilder.length() > 0 ? toolDescBuilder.toString() : "暂无可用工具";
         this.allTools = toolList.toArray(new ToolCallback[0]);
@@ -117,7 +122,7 @@ public class DeepSeekService {
         // 构建带工具的 ChatClient（内置工具通过 @Tool 注解自动注册）
         this.chatClient = chatClientBuilder
                 .defaultToolCallbacks(allTools)
-                .defaultTools(channelHistoryTool, currentTimeTool, tarotTool, leaderboardTool)
+                .defaultTools(channelHistoryTool, currentTimeTool, tarotTool, leaderboardTool, ragSearchTool)
                 .build();
     }
 
