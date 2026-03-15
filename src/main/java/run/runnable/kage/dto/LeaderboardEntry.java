@@ -10,6 +10,7 @@ public class LeaderboardEntry {
     private int rank;
     private String userId;
     private String userName;
+    private String avatarUrl;
     private int messageCount;
     private int totalScore;
 }

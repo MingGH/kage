@@ -3,6 +3,7 @@ package run.runnable.kage.controller;
 import lombok.RequiredArgsConstructor;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import run.runnable.kage.common.ApiResponse;
@@ -57,11 +58,11 @@ public class DiscordController {
 
         return switch (period) {
             case "week" -> leaderboardStatsService.getWeeklyLeaderboard(guildId, LEADERBOARD_LIMIT)
-                    .collectList().map(ApiResponse::success);
+                    .collectList().map(list -> { enrichWithAvatars(list); return ApiResponse.success(list); });
             case "month" -> leaderboardStatsService.getMonthlyLeaderboard(guildId, LEADERBOARD_LIMIT)
-                    .collectList().map(ApiResponse::success);
+                    .collectList().map(list -> { enrichWithAvatars(list); return ApiResponse.success(list); });
             default -> leaderboardStatsService.getDailyLeaderboard(guildId, LocalDate.now(), LEADERBOARD_LIMIT)
-                    .collectList().map(ApiResponse::success);
+                    .collectList().map(list -> { enrichWithAvatars(list); return ApiResponse.success(list); });
         };
     }
 
@@ -131,5 +132,29 @@ public class DiscordController {
         if (jda == null) return null;
         List<Guild> guilds = jda.getGuilds();
         return guilds.isEmpty() ? null : guilds.get(0).getId();
+    }
+
+    /**
+     * 为排行榜条目填充 Discord 头像 URL
+     */
+    private void enrichWithAvatars(List<LeaderboardEntry> entries) {
+        JDA jda = discordBotService.getJda();
+        if (jda == null) return;
+
+        String guildId = getFirstGuildId();
+        if (guildId == null) return;
+        Guild guild = jda.getGuildById(guildId);
+        if (guild == null) return;
+
+        for (LeaderboardEntry entry : entries) {
+            try {
+                Member member = guild.getMemberById(entry.getUserId());
+                if (member != null) {
+                    entry.setAvatarUrl(member.getEffectiveAvatarUrl() + "?size=64");
+                }
+            } catch (Exception ignored) {
+                // 缓存中没有该成员，跳过
+            }
+        }
     }
 }
