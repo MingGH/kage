@@ -82,20 +82,47 @@ public class DiscordController {
         }
 
         Guild guild = jda.getGuildById(guildId);
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("guildName", guild != null ? guild.getName() : "Unknown");
-        stats.put("memberCount", guild != null ? guild.getMemberCount() : 0);
+        if (guild == null) {
+            return Mono.just(ApiResponse.error(503, "Guild not found"));
+        }
 
-        // 查今日摸鱼王（日榜第一名）
-        return leaderboardStatsService.getDailyLeaderboard(guildId, LocalDate.now(), 1)
-                .collectList()
-                .map(topList -> {
+        // retrieveMetaData 从 Discord API 获取准确的成员总数，而非缓存数
+        Mono<Integer> memberCountMono = Mono.fromFuture(
+                guild.retrieveMetaData().submit()
+        ).map(Guild.MetaData::getApproximateMembers);
+
+        Mono<List<LeaderboardEntry>> topMono = leaderboardStatsService
+                .getDailyLeaderboard(guildId, LocalDate.now(), 1)
+                .collectList();
+
+        return Mono.zip(memberCountMono, topMono)
+                .map(tuple -> {
+                    Map<String, Object> stats = new HashMap<>();
+                    stats.put("guildName", guild.getName());
+                    stats.put("memberCount", tuple.getT1());
+                    List<LeaderboardEntry> topList = tuple.getT2();
                     if (!topList.isEmpty()) {
                         LeaderboardEntry top = topList.get(0);
                         stats.put("todayKing", top.getUserName());
                         stats.put("todayKingScore", top.getTotalScore());
                     }
                     return ApiResponse.success(stats);
+                })
+                .onErrorResume(e -> {
+                    // fallback: 用缓存的 memberCount
+                    Map<String, Object> stats = new HashMap<>();
+                    stats.put("guildName", guild.getName());
+                    stats.put("memberCount", guild.getMemberCount());
+                    return leaderboardStatsService.getDailyLeaderboard(guildId, LocalDate.now(), 1)
+                            .collectList()
+                            .map(topList -> {
+                                if (!topList.isEmpty()) {
+                                    LeaderboardEntry top = topList.get(0);
+                                    stats.put("todayKing", top.getUserName());
+                                    stats.put("todayKingScore", top.getTotalScore());
+                                }
+                                return ApiResponse.success(stats);
+                            });
                 });
     }
 
