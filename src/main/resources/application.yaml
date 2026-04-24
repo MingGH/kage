@@ -33,7 +33,7 @@ spring.ai:
     read-timeout: 120s
     chat:
       options:
-        model: deepseek-chat
+        model: deepseek-v4-pro
   mcp:
     client:
       enabled: false  # 禁用自动配置，使用自定义配置
