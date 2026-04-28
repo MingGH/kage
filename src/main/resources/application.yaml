@@ -112,6 +112,7 @@ discord:
       
       希望你在这里玩得开心～ 有问题可以随时 @我 哦！
       输入 `/help` 或 `@布布管家 help` 查看我能做什么 😊
+  sensitive-keywords: ${DISCORD_SENSITIVE_KEYWORDS:vpn,梯子}
   leaderboard:
     broadcast-channel: ${DISCORD_LEADERBOARD_CHANNEL:摸鱼排行榜}
 
