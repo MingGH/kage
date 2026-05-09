@@ -8,7 +8,6 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.deepseek.DeepSeekAssistantMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.mcp.AsyncMcpToolCallback;
 import org.springframework.ai.tool.ToolCallback;
@@ -233,39 +232,25 @@ public class DeepSeekService {
         log.info("开始流式调用 AI，消息数: {}", messages.size());
         Prompt prompt = new Prompt(messages);
         StringBuilder fullContent = new StringBuilder();
-        StringBuilder fullReasoning = new StringBuilder();
         
         return chatClient.prompt(prompt)
                 .stream()
                 .chatResponse()
                 .filter(resp -> resp != null && resp.getResult() != null)
-                .doOnNext(resp -> {
-                    // 提取 content
-                    String chunk = resp.getResult().getOutput().getText();
-                    if (chunk != null && !chunk.isEmpty()) {
-                        fullContent.append(chunk);
-                    }
-                    // 提取 reasoning_content（DeepSeek thinking 模型特有）
-                    var output = resp.getResult().getOutput();
-                    if (output instanceof DeepSeekAssistantMessage deepSeekMsg) {
-                        String reasoning = deepSeekMsg.getReasoningContent();
-                        if (reasoning != null && !reasoning.isEmpty()) {
-                            fullReasoning.append(reasoning);
-                        }
-                    }
-                })
                 .flatMap(resp -> {
                     String text = resp.getResult().getOutput().getText();
-                    return text != null && !text.isEmpty() ? Flux.just(text) : Flux.empty();
+                    if (text != null && !text.isEmpty()) {
+                        fullContent.append(text);
+                        return Flux.just(text);
+                    }
+                    return Flux.empty();
                 })
                 .doOnComplete(() -> {
                     String content = fullContent.toString();
-                    String reasoningContent = fullReasoning.length() > 0 ? fullReasoning.toString() : null;
-                    log.info("AI 流式响应完成，内容长度: {}, reasoning长度: {}", 
-                            content.length(), 
-                            reasoningContent != null ? reasoningContent.length() : 0);
-                    // 保存对话历史（包含 reasoning_content）
-                    saveChatHistory(guildId, userId, originalMessage, content, reasoningContent);
+                    log.info("AI 流式响应完成，内容长度: {}", content.length());
+                    // 不保存 reasoningContent：Spring AI 2.0.0-M6 的 createRequest() 不会序列化
+                    // 该字段，保存后会导致后续请求 400 错误
+                    saveChatHistory(guildId, userId, originalMessage, content, null);
                     if (onComplete != null) {
                         onComplete.accept(content);
                     }
@@ -344,15 +329,9 @@ public class DeepSeekService {
             if ("user".equals(msg.getRole())) {
                 messages.add(new UserMessage(msg.getContent()));
             } else if ("assistant".equals(msg.getRole())) {
-                String reasoningContent = msg.getReasoningContent();
-                if (reasoningContent != null && !reasoningContent.isEmpty()) {
-                    messages.add(DeepSeekAssistantMessage.builder()
-                            .content(msg.getContent())
-                            .reasoningContent(reasoningContent)
-                            .build());
-                } else {
-                    messages.add(new AssistantMessage(msg.getContent()));
-                }
+                // Spring AI 2.0.0-M6 的 DeepSeekChatModel.createRequest() 不会序列化 reasoningContent
+                // 所以不能保存/传回 reasoningContent，否则 DeepSeek 会报 400 要求必须传回
+                messages.add(new AssistantMessage(msg.getContent()));
             }
         });
 
