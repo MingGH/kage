@@ -248,8 +248,6 @@ public class DeepSeekService {
                 .doOnComplete(() -> {
                     String content = fullContent.toString();
                     log.info("AI 流式响应完成，内容长度: {}", content.length());
-                    // 不保存 reasoningContent：Spring AI 2.0.0-M6 的 createRequest() 不会序列化
-                    // 该字段，保存后会导致后续请求 400 错误
                     saveChatHistory(guildId, userId, originalMessage, content, null);
                     if (onComplete != null) {
                         onComplete.accept(content);
@@ -329,8 +327,6 @@ public class DeepSeekService {
             if ("user".equals(msg.getRole())) {
                 messages.add(new UserMessage(msg.getContent()));
             } else if ("assistant".equals(msg.getRole())) {
-                // Spring AI 2.0.0-M6 的 DeepSeekChatModel.createRequest() 不会序列化 reasoningContent
-                // 所以不能保存/传回 reasoningContent，否则 DeepSeek 会报 400 要求必须传回
                 messages.add(new AssistantMessage(msg.getContent()));
             }
         });

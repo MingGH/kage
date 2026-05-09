@@ -24,16 +24,18 @@ project:
 server:
   port: ${SERVER_PORT:8080}
 
-# Spring AI 配置 (DeepSeek 原生支持)
+# Spring AI 配置 (通过 OpenAI 兼容接口连接 DeepSeek)
 spring.ai:
-  deepseek:
-    base-url: https://api.deepseek.com
-    api-key: ${DEEPSEEK_API_KEY:}
-    connect-timeout: 30s
-    read-timeout: 120s
+  openai:
     chat:
+      base-url: https://api.deepseek.com
+      api-key: ${DEEPSEEK_API_KEY:}
+      timeout: 120s
       options:
         model: deepseek-v4-flash
+        extra-body:
+          thinking:
+            type: disabled
   mcp:
     client:
       enabled: false  # 禁用自动配置，使用自定义配置

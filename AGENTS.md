@@ -35,9 +35,10 @@ mvn clean package dockerfile:build -DskipTests
 
 ### Spring AI 2.0.0-M6
 
-- Uses `spring.ai.deepseek.*` properties (not `spring.ai.openai.*`)
-- `DeepSeekAssistantMessage` with `reasoningContent()` must be used when passing thinking model history back to DeepSeek API
-- Model: `deepseek-v4-flash`
+- Uses `spring.ai.openai.*` properties with `base-url` pointing to DeepSeek (OpenAI-compatible API)
+- Model: `deepseek-v4-flash` with thinking mode explicitly disabled via `extra-body`
+- **DO NOT use `spring-ai-starter-model-deepseek`** — it has bugs: `DeepSeekChatModel.createRequest()` doesn't serialize `reasoningContent`, and `DeepSeekChatOptions` lacks a `thinking` toggle. Use `spring-ai-starter-model-openai` instead.
+- Thinking mode is disabled because Spring AI cannot pass `reasoning_content` back during internal tool-call loops, causing 400 errors
 
 ### Project Conventions
 

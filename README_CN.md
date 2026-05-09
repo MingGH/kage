@@ -39,7 +39,7 @@
 ## 🆕 最近更新
 
 - **Spring Boot 4.0 + Spring AI 2.0** - 升级到 Spring Boot 4.0.6 和 Spring AI 2.0.0-M6，原生支持 DeepSeek
-- **DeepSeek V4 Flash** - 使用 deepseek-v4-flash 模型，支持 reasoning_content
+- **DeepSeek V4 Flash** - 使用 deepseek-chat 模型（deepseek-v4-flash 非思考模式）
 - **流式 AI 回复** - AI 回复实时显示，带输入中提示，单用户请求队列防止冲突
 - **MCP 集成** - 添加 Jina MCP 支持，实现实时联网搜索和内容读取
 - **多轮对话** - AI 可以记住每个用户在每个服务器的对话上下文
@@ -110,7 +110,7 @@
 - JDA 5.x (Java Discord API)
 - PostgreSQL (R2DBC)
 - Redis
-- DeepSeek API (deepseek-v4-flash)
+- DeepSeek API (deepseek-chat)
 - Jina MCP (联网搜索)
 
 ## 架构

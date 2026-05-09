@@ -14,7 +14,8 @@ spring:
 # Spring AI 配置
 spring.ai:
   openai:
-    api-key: your_deepseek_api_key
+    chat:
+      api-key: your_deepseek_api_key
 
 discord:
   bot:

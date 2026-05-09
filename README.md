@@ -39,7 +39,7 @@ I wanted to build a Chinese Discord bot that I could actually use. Mee6 is way t
 ## 🆕 Recent Updates
 
 - **Spring Boot 4.0 + Spring AI 2.0** - Upgraded to Spring Boot 4.0.6 and Spring AI 2.0.0-M6 with native DeepSeek support
-- **DeepSeek V4 Flash** - Using deepseek-v4-flash model with reasoning_content support
+- **DeepSeek V4 Flash** - Using deepseek-chat model (deepseek-v4-flash non-thinking mode)
 - **Streaming AI Responses** - AI replies appear in real-time with typing indicator, per-user request queuing prevents conflicts
 - **MCP Integration** - Added Jina MCP support for real-time web search and content reading
 - **Multi-turn Conversations** - AI remembers conversation context per user per server
@@ -110,7 +110,7 @@ Simply @BuBu to chat with AI, with support for real-time web search.
 - JDA 5.x (Java Discord API)
 - PostgreSQL (R2DBC)
 - Redis
-- DeepSeek API (deepseek-v4-flash)
+- DeepSeek API (deepseek-chat)
 - Jina MCP (Web Search)
 
 ## Architecture
