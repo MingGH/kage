@@ -36,6 +36,17 @@ spring.ai:
         extra-body:
           thinking:
             type: disabled
+    embedding:
+      enabled: false
+    audio:
+      speech:
+        enabled: false
+      transcription:
+        enabled: false
+    image:
+      enabled: false
+    moderation:
+      enabled: false
   mcp:
     client:
       enabled: false  # 禁用自动配置，使用自定义配置
