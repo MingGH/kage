@@ -30,6 +30,7 @@ import run.runnable.kage.service.tool.TarotTool;
 import org.springframework.beans.factory.annotation.Value;
 
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -158,7 +159,7 @@ public class DeepSeekService {
         return loadChatHistory(guildId, userId)
                 .flatMap(history -> callAi(history, userMessage))
                 .flatMap(content -> saveAndReturn(guildId, userId, userMessage, content))
-                .doOnError(e -> log.error("AI 调用失败: {}", e.getMessage()))
+                .doOnError(e -> logAiError("AI 调用失败", e, guildId, userId, userMessage))
                 .onErrorReturn("AI 服务暂时不可用，请稍后再试");
     }
 
@@ -198,7 +199,7 @@ public class DeepSeekService {
                     
                     return loadChatHistory(guildId, userId)
                             .flatMapMany(history -> callAiStream(history, userMessage, guildId, userId, userMessage, onComplete))
-                            .doOnError(e -> log.error("AI 流式调用失败: {}", e.getMessage()))
+                            .doOnError(e -> logAiError("AI 流式调用失败", e, guildId, userId, userMessage))
                             .doFinally(signal -> {
                                 releaseLock(guildId, userId);  // 释放分布式锁
                                 channelHistoryTool.clearContext(guildId, userId);  // 清理上下文
@@ -370,6 +371,47 @@ public class DeepSeekService {
 
     public Mono<Void> clearHistory(String guildId, String userId) {
         return chatMessageRepository.softDeleteByGuildAndUser(guildId, userId);
+    }
+
+    /**
+     * 统一输出 AI 调用失败的详细信息：
+     * - Spring AI 底层调用 DeepSeek 通过 WebClient 发起，失败时抛 {@link WebClientResponseException}
+     *   默认 e.getMessage() 只有状态行（如 "400 Bad Request from POST ..."），看不到 DeepSeek
+     *   返回的错误体（error.message），这里把响应体完整打出来，方便定位 400 的具体原因。
+     */
+    private void logAiError(String prefix, Throwable e, String guildId, String userId, String userMessage) {
+        WebClientResponseException wcre = findWebClientResponseException(e);
+        if (wcre != null) {
+            String body = wcre.getResponseBodyAsString();
+            String preview = userMessage == null ? "" :
+                    (userMessage.length() > 200 ? userMessage.substring(0, 200) + "..." : userMessage);
+            log.error("{}: status={} {}, guildId={}, userId={}, userMessagePreview=[{}], responseBody={}, headers={}",
+                    prefix,
+                    wcre.getStatusCode().value(),
+                    wcre.getStatusText(),
+                    guildId,
+                    userId,
+                    preview,
+                    body,
+                    wcre.getHeaders(),
+                    e);
+        } else {
+            log.error("{}: guildId={}, userId={}, message={}", prefix, guildId, userId, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 在异常链里查找 WebClientResponseException（Spring AI 常把它包在 reactor 的 OnAssemblyException 里）
+     */
+    private WebClientResponseException findWebClientResponseException(Throwable e) {
+        Throwable cur = e;
+        for (int i = 0; cur != null && i < 10; i++) {
+            if (cur instanceof WebClientResponseException) {
+                return (WebClientResponseException) cur;
+            }
+            cur = cur.getCause();
+        }
+        return null;
     }
 
 }
