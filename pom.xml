@@ -146,6 +146,13 @@
             <artifactId>spring-ai-starter-mcp-client-webflux</artifactId>
             <version>${spring-ai.version}</version>
         </dependency>
+
+        <!-- Spring AI 2.0 需要 spring-retry -->
+        <dependency>
+            <groupId>org.springframework.retry</groupId>
+            <artifactId>spring-retry</artifactId>
+            <version>2.0.11</version>
+        </dependency>
     </dependencies>
 
     <repositories>
