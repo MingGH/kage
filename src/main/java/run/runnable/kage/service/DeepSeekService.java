@@ -254,8 +254,10 @@ public class DeepSeekService {
                         }
                     }
                 })
-                .map(resp -> resp.getResult().getOutput().getText())
-                .filter(chunk -> chunk != null && !chunk.isEmpty())
+                .flatMap(resp -> {
+                    String text = resp.getResult().getOutput().getText();
+                    return text != null && !text.isEmpty() ? Flux.just(text) : Flux.empty();
+                })
                 .doOnComplete(() -> {
                     String content = fullContent.toString();
                     String reasoningContent = fullReasoning.length() > 0 ? fullReasoning.toString() : null;
