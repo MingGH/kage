@@ -344,12 +344,15 @@ public class DeepSeekService {
             if ("user".equals(msg.getRole())) {
                 messages.add(new UserMessage(msg.getContent()));
             } else if ("assistant".equals(msg.getRole())) {
-                // DeepSeek V4 thinking 模型：如果有 reasoning_content，使用 DeepSeekAssistantMessage
-                // 注意：Spring AI 1.1.0 的 DeepSeekChatModel.createRequest() 有 bug，
-                // 它在构造 ChatCompletionMessage 时没有传递 reasoningContent 参数。
-                // 所以即使我们传了 DeepSeekAssistantMessage，也不会被序列化到请求中。
-                // 解决方案：暂时不使用 DeepSeekAssistantMessage，等 Spring AI 修复后再启用。
-                messages.add(new AssistantMessage(msg.getContent()));
+                String reasoningContent = msg.getReasoningContent();
+                if (reasoningContent != null && !reasoningContent.isEmpty()) {
+                    messages.add(DeepSeekAssistantMessage.builder()
+                            .content(msg.getContent())
+                            .reasoningContent(reasoningContent)
+                            .build());
+                } else {
+                    messages.add(new AssistantMessage(msg.getContent()));
+                }
             }
         });
 
