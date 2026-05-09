@@ -22,7 +22,11 @@ import java.util.concurrent.TimeUnit;
 @Configuration
 public class AppConfig {
 
-
+    @Bean
+    public WebClient.Builder webClientBuilder() {
+        return WebClient.builder()
+                .codecs(codecs -> codecs.defaultCodecs().maxInMemorySize(50 * 1024 * 1024));
+    }
 
     @Bean("webClient")
     @Profile(AppConstant.ACTIVE_ENV_PROD)
