@@ -344,16 +344,13 @@ public class DeepSeekService {
             if ("user".equals(msg.getRole())) {
                 messages.add(new UserMessage(msg.getContent()));
             } else if ("assistant".equals(msg.getRole())) {
-                // 如果有 reasoningContent，使用 DeepSeekAssistantMessage 回传
-                // DeepSeek 官方要求：如果模型执行了 tool call，必须回传 reasoning_content
-                if (msg.getReasoningContent() != null && !msg.getReasoningContent().isEmpty()) {
-                    messages.add(new DeepSeekAssistantMessage.Builder()
-                            .content(msg.getContent())
-                            .reasoningContent(msg.getReasoningContent())
-                            .build());
-                } else {
-                    messages.add(new AssistantMessage(msg.getContent()));
-                }
+                // DeepSeek V4 thinking 模型要求必须回传 reasoning_content
+                // 如果历史消息没有 reasoning_content，传入空字符串避免 400 错误
+                String reasoningContent = msg.getReasoningContent();
+                messages.add(new DeepSeekAssistantMessage.Builder()
+                        .content(msg.getContent())
+                        .reasoningContent(reasoningContent != null ? reasoningContent : "")
+                        .build());
             }
         });
 
