@@ -105,12 +105,12 @@
 ## 技术栈
 
 - Java 17+
-- Spring Boot 3.5.x (WebFlux)
-- Spring AI 1.1.0
+- Spring Boot 4.0.x (WebFlux)
+- Spring AI 2.0.0-M6
 - JDA 5.x (Java Discord API)
 - PostgreSQL (R2DBC)
 - Redis
-- DeepSeek API (OpenAI 兼容接口)
+- DeepSeek API (deepseek-v4-flash)
 - Jina MCP (联网搜索)
 
 ## 架构
@@ -165,7 +165,7 @@ spring:
       password: your_redis_password
 
 spring.ai:
-  openai:
+  deepseek:
     api-key: "your_deepseek_api_key"
 
 jina:
