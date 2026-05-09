@@ -8,6 +8,7 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.deepseek.DeepSeekAssistantMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.mcp.AsyncMcpToolCallback;
 import org.springframework.ai.tool.ToolCallback;
@@ -232,17 +233,37 @@ public class DeepSeekService {
         log.info("开始流式调用 AI，消息数: {}", messages.size());
         Prompt prompt = new Prompt(messages);
         StringBuilder fullContent = new StringBuilder();
+        StringBuilder fullReasoning = new StringBuilder();
         
         return chatClient.prompt(prompt)
                 .stream()
-                .content()
+                .chatResponse()
+                .filter(resp -> resp != null && resp.getResult() != null)
+                .doOnNext(resp -> {
+                    // 提取 content
+                    String chunk = resp.getResult().getOutput().getText();
+                    if (chunk != null && !chunk.isEmpty()) {
+                        fullContent.append(chunk);
+                    }
+                    // 提取 reasoning_content（DeepSeek thinking 模型特有）
+                    var output = resp.getResult().getOutput();
+                    if (output instanceof DeepSeekAssistantMessage deepSeekMsg) {
+                        String reasoning = deepSeekMsg.getReasoningContent();
+                        if (reasoning != null && !reasoning.isEmpty()) {
+                            fullReasoning.append(reasoning);
+                        }
+                    }
+                })
+                .map(resp -> resp.getResult().getOutput().getText())
                 .filter(chunk -> chunk != null && !chunk.isEmpty())
-                .doOnNext(chunk -> fullContent.append(chunk))
                 .doOnComplete(() -> {
                     String content = fullContent.toString();
-                    log.info("AI 流式响应完成，内容长度: {}", content.length());
-                    // 保存对话历史
-                    saveChatHistory(guildId, userId, originalMessage, content);
+                    String reasoningContent = fullReasoning.length() > 0 ? fullReasoning.toString() : null;
+                    log.info("AI 流式响应完成，内容长度: {}, reasoning长度: {}", 
+                            content.length(), 
+                            reasoningContent != null ? reasoningContent.length() : 0);
+                    // 保存对话历史（包含 reasoning_content）
+                    saveChatHistory(guildId, userId, originalMessage, content, reasoningContent);
                     if (onComplete != null) {
                         onComplete.accept(content);
                     }
@@ -321,7 +342,16 @@ public class DeepSeekService {
             if ("user".equals(msg.getRole())) {
                 messages.add(new UserMessage(msg.getContent()));
             } else if ("assistant".equals(msg.getRole())) {
-                messages.add(new AssistantMessage(msg.getContent()));
+                // 如果有 reasoningContent，使用 DeepSeekAssistantMessage 回传
+                // DeepSeek 官方要求：如果模型执行了 tool call，必须回传 reasoning_content
+                if (msg.getReasoningContent() != null && !msg.getReasoningContent().isEmpty()) {
+                    messages.add(new DeepSeekAssistantMessage.Builder()
+                            .content(msg.getContent())
+                            .reasoningContent(msg.getReasoningContent())
+                            .build());
+                } else {
+                    messages.add(new AssistantMessage(msg.getContent()));
+                }
             }
         });
 
@@ -340,7 +370,7 @@ public class DeepSeekService {
     /**
      * 异步保存对话历史
      */
-    private void saveChatHistory(String guildId, String userId, String userMessage, String assistantContent) {
+    private void saveChatHistory(String guildId, String userId, String userMessage, String assistantContent, String reasoningContent) {
         LocalDateTime now = LocalDateTime.now();
         
         ChatMessage userMsg = ChatMessage.builder()
@@ -357,6 +387,7 @@ public class DeepSeekService {
                 .userId(userId)
                 .role("assistant")
                 .content(assistantContent)
+                .reasoningContent(reasoningContent)
                 .deleted(false)
                 .createdAt(now.plusNanos(1000))
                 .build();
@@ -367,6 +398,13 @@ public class DeepSeekService {
                         v -> {},
                         e -> log.error("保存对话历史失败: {}", e.getMessage())
                 );
+    }
+    
+    /**
+     * 异步保存对话历史（无 reasoningContent 的重载）
+     */
+    private void saveChatHistory(String guildId, String userId, String userMessage, String assistantContent) {
+        saveChatHistory(guildId, userId, userMessage, assistantContent, null);
     }
 
     public Mono<Void> clearHistory(String guildId, String userId) {

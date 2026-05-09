@@ -28,6 +28,9 @@ public class ChatMessage {
     @Column("content")
     private String content;
 
+    @Column("reasoning_content")
+    private String reasoningContent;
+
     @Column("deleted")
     private Boolean deleted;
 
