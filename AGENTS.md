@@ -42,7 +42,7 @@ mvn clean package dockerfile:build -DskipTests
 
 ### Project Conventions
 
-- Java 17
+- Java 25（JDK 23+ 需 `<maven.compiler.proc>full</maven.compiler.proc>` 才能启用 Lombok 注解处理）
 - Reactive stack: WebFlux + R2DBC + Reactive Redis
 - Discord integration: JDA 5.x
 - Test framework: JUnit 5 (Jupiter)
