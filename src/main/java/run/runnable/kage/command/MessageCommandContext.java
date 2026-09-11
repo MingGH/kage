@@ -94,6 +94,11 @@ public class MessageCommandContext implements CommandContext {
 
     @Override
     public void deferReply(Consumer<ReplyHook> callback) {
+        deferReply(callback, null);
+    }
+
+    @Override
+    public void deferReply(Consumer<ReplyHook> callback, Consumer<Throwable> onFailure) {
         event.getMessage().reply("🤔 思考中...").queue(
                 msg -> callback.accept(new ReplyHook() {
                     @Override
@@ -107,15 +112,18 @@ public class MessageCommandContext implements CommandContext {
                     }
 
                     @Override
-                    public void editMessageWithImage(String message, byte[] imageBytes, String fileName, Runnable onFailure) {
+                    public void editMessageWithImage(String message, byte[] imageBytes, String fileName, Runnable onImageFailure) {
                         msg.editMessage(message)
                                 .setFiles(List.of(FileUpload.fromData(imageBytes, fileName)))
                                 .queue(null, err -> {
                                     log.error("图片附件上传失败", err);
-                                    if (onFailure != null) onFailure.run();
+                                    if (onImageFailure != null) onImageFailure.run();
                                 });
                     }
                 }),
-                err -> log.error("发送占位消息失败", err));
+                err -> {
+                    log.error("发送占位消息失败", err);
+                    if (onFailure != null) onFailure.accept(err);
+                });
     }
 }

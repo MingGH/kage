@@ -40,6 +40,8 @@ public class DiscordBotService implements CommandLineRunner {
             log.info("Starting Discord bot...");
             
             jda = JDABuilder.createDefault(discordConfig.getToken())
+                    .setHttpClientBuilder(new okhttp3.OkHttpClient.Builder()
+                            .callTimeout(30, java.util.concurrent.TimeUnit.SECONDS))
                     .setActivity(Activity.playing(discordConfig.getActivity()))
                     .enableIntents(
                             GatewayIntent.GUILD_MESSAGES,

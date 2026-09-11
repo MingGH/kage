@@ -2,10 +2,12 @@ package run.runnable.kage.command.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import net.dv8tion.jda.api.utils.FileUpload;
 import org.springframework.stereotype.Component;
 import run.runnable.kage.command.CommandContext;
 import run.runnable.kage.command.CommandContext.ReplyHook;
@@ -15,6 +17,8 @@ import run.runnable.kage.dto.GeneratedImage;
 import run.runnable.kage.service.DrawRateLimiter;
 import run.runnable.kage.service.SeedreamService;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 /**
  * /draw AI 画图命令：豆包 Seedream 生成图片并回复到频道
@@ -72,7 +76,9 @@ public class DrawCommand implements UnifiedCommand {
                             String msg = err.getMessage() != null ? err.getMessage() : err.getClass().getSimpleName();
                             log.info("/draw 限流拒绝: user={}, {}", userId, msg);
                             hook.editMessage("🎨 " + msg);
-                        }));
+                        }),
+                // 交互确认失败（如 connections 挂死超时）→ 降级为普通频道消息发送
+                err -> fallbackToChannelMessage(ctx, ctx.getUser().getName(), prompt, size, userId));
     }
 
     /**
@@ -147,5 +153,48 @@ public class DrawCommand implements UnifiedCommand {
         boolean hasImage() {
             return bytes != null && bytes.length > 0;
         }
+    }
+
+    /**
+     * 交互确认失败时的降级路径：用普通频道消息承载生成结果（绕开 interactions 端点）
+     */
+    private void fallbackToChannelMessage(CommandContext ctx, String userName, String prompt, String size, String userId) {
+        log.warn("/draw 交互确认失败，降级为频道消息模式: user={}", userId);
+        ctx.getChannel().sendMessage("🎨 **" + userName + "** 的画作生成中...").queue(
+                msg -> drawRateLimiter.tryAcquire(userId).subscribe(
+                        v -> draw(replyHookOf(msg), userName, prompt, size),
+                        err -> msg.editMessage("🎨 " + messageOf(err)).queue()),
+                err -> log.error("/draw 降级消息发送失败", err));
+    }
+
+    /**
+     * 普通频道消息包装为 ReplyHook，复用既有生成与回复逻辑
+     */
+    private ReplyHook replyHookOf(Message msg) {
+        return new ReplyHook() {
+            @Override
+            public void sendMessage(String response) {
+                msg.editMessage(response).queue();
+            }
+
+            @Override
+            public void editMessage(String response) {
+                msg.editMessage(response).queue();
+            }
+
+            @Override
+            public void editMessageWithImage(String message, byte[] imageBytes, String fileName, Runnable onImageFailure) {
+                msg.editMessage(message)
+                        .setFiles(List.of(FileUpload.fromData(imageBytes, fileName)))
+                        .queue(null, err -> {
+                            log.error("图片附件上传失败", err);
+                            if (onImageFailure != null) onImageFailure.run();
+                        });
+            }
+        };
+    }
+
+    private String messageOf(Throwable e) {
+        return e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
     }
 }

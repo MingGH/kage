@@ -68,6 +68,13 @@ public interface CommandContext {
     void deferReply(Consumer<ReplyHook> callback);
 
     /**
+     * 同上，交互确认失败时触发 onFailure（如降级为频道消息）
+     */
+    default void deferReply(Consumer<ReplyHook> callback, Consumer<Throwable> onFailure) {
+        deferReply(callback);
+    }
+
+    /**
      * 延迟回复的钩子
      */
     interface ReplyHook {

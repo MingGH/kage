@@ -78,6 +78,11 @@ public class SlashCommandContext implements CommandContext {
 
     @Override
     public void deferReply(Consumer<ReplyHook> callback) {
+        deferReply(callback, null);
+    }
+
+    @Override
+    public void deferReply(Consumer<ReplyHook> callback, Consumer<Throwable> onFailure) {
         event.deferReply().queue(
                 hook ->
                         // 先发送一条初始消息（使用 event.getHook()，与生产验证过的模式一致）
@@ -94,17 +99,22 @@ public class SlashCommandContext implements CommandContext {
                                     }
 
                                     @Override
-                                    public void editMessageWithImage(String message, byte[] imageBytes, String fileName, Runnable onFailure) {
+                                    public void editMessageWithImage(String message, byte[] imageBytes, String fileName, Runnable onImageFailure) {
                                         msg.editMessage(message)
                                                 .setFiles(List.of(FileUpload.fromData(imageBytes, fileName)))
                                                 .queue(null, err -> {
                                                     log.error("图片附件上传失败", err);
-                                                    if (onFailure != null) onFailure.run();
+                                                    if (onImageFailure != null) onImageFailure.run();
                                                 });
                                     }
                                 }),
-                                err -> log.error("发送占位消息失败", err)),
-                err -> log.error("deferReply 确认交互失败", err));
+                                err -> deferFailure(onFailure, err, "发送占位消息失败")),
+                err -> deferFailure(onFailure, err, "deferReply 确认交互失败"));
+    }
+
+    private void deferFailure(Consumer<Throwable> onFailure, Throwable err, String prefix) {
+        log.error(prefix, err);
+        if (onFailure != null) onFailure.accept(err);
     }
 
     public SlashCommandInteractionEvent getEvent() {
