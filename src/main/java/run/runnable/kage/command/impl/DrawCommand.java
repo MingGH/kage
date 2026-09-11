@@ -17,6 +17,7 @@ import run.runnable.kage.dto.GeneratedImage;
 import run.runnable.kage.service.DrawRateLimiter;
 import run.runnable.kage.service.SeedreamService;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 
@@ -65,18 +66,20 @@ public class DrawCommand implements UnifiedCommand {
         String userId = ctx.getUser().getId();
         log.info("/draw 收到请求: user={}, size={}", userId, size);
 
-        // 先同步 ack 交互（与 AskCommand 同款模式），Reactor 链全部在回调内执行
+        // 先同步 ack 交互（与 AskCommand 同款模式），Reactor 链切到 boundedElastic 执行
         ctx.deferReply(hook ->
-                drawRateLimiter.tryAcquire(userId).subscribe(
-                        v -> {
-                            log.info("/draw 限流通过: user={}", userId);
-                            draw(hook, ctx.getUser().getName(), prompt, size);
-                        },
-                        err -> {
-                            String msg = err.getMessage() != null ? err.getMessage() : err.getClass().getSimpleName();
-                            log.info("/draw 限流拒绝: user={}, {}", userId, msg);
-                            hook.editMessage("🎨 " + msg);
-                        }),
+                drawRateLimiter.tryAcquire(userId)
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .subscribe(
+                                v -> {
+                                    log.info("/draw 限流通过: user={}", userId);
+                                    draw(hook, ctx.getUser().getName(), prompt, size);
+                                },
+                                err -> {
+                                    String msg = err.getMessage() != null ? err.getMessage() : err.getClass().getSimpleName();
+                                    log.info("/draw 限流拒绝: user={}, {}", userId, msg);
+                                    hook.editMessage("🎨 " + msg);
+                                }),
                 // 交互确认失败（如 connections 挂死超时）→ 降级为普通频道消息发送
                 err -> fallbackToChannelMessage(ctx, ctx.getUser().getName(), prompt, size, userId));
     }
