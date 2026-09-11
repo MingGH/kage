@@ -84,6 +84,9 @@ spec:
             # 内部测试服务：仅绑定 127.0.0.1，集群外不可访问
             - name: INTERNAL_TEST_ENABLED
               value: "true"
+            # 临时排查：JDA REST 请求 DEBUG 日志（interactions 端点卡死定位用）
+            - name: LOGGING_LEVEL_NET_DV8TION_JDA
+              value: DEBUG
           readinessProbe:
             httpGet:
               path: /hl/check
