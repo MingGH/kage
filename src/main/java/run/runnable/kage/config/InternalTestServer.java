@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.SmartLifecycle;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ReactorHttpHandlerAdapter;
@@ -13,7 +12,6 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
-import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServer;
 import run.runnable.kage.dto.GeneratedImage;
@@ -21,6 +19,7 @@ import run.runnable.kage.service.DeepSeekService;
 import run.runnable.kage.service.DrawRateLimiter;
 import run.runnable.kage.service.SeedreamService;
 
+import jakarta.annotation.PreDestroy;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,7 +36,7 @@ import static org.springframework.web.reactive.function.server.RouterFunctions.r
 @Component
 @ConditionalOnProperty(name = "internal-test.enabled", havingValue = "true")
 @RequiredArgsConstructor
-public class InternalTestServer implements SmartLifecycle {
+public class InternalTestServer {
 
     private static final int PORT = 8081;
 
@@ -45,12 +44,15 @@ public class InternalTestServer implements SmartLifecycle {
     private final SeedreamService seedreamService;
     private final DrawRateLimiter drawRateLimiter;
 
-    private volatile Disposable serverDisposable;
+    private volatile reactor.netty.DisposableServer server;
 
+    /**
+     * 应用就绪后启动（只由 ApplicationReadyEvent 触发一次）
+     */
     @EventListener(ApplicationReadyEvent.class)
     public void start() {
         RouterFunction<ServerResponse> routes = buildRoutes();
-        serverDisposable = HttpServer.create()
+        server = HttpServer.create()
                 .host("127.0.0.1")
                 .port(PORT)
                 .handle(new ReactorHttpHandlerAdapter(RouterFunctions.toHttpHandler(routes)))
@@ -58,16 +60,11 @@ public class InternalTestServer implements SmartLifecycle {
         log.info("内部测试服务已启动: http://127.0.0.1:{} (仅限 Pod 内访问)", PORT);
     }
 
-    @Override
+    @PreDestroy
     public void stop() {
-        if (serverDisposable != null) {
-            serverDisposable.dispose();
+        if (server != null) {
+            server.dispose();
         }
-    }
-
-    @Override
-    public boolean isRunning() {
-        return serverDisposable != null && !serverDisposable.isDisposed();
     }
 
     private RouterFunction<ServerResponse> buildRoutes() {
