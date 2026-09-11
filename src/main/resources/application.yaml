@@ -32,7 +32,7 @@ spring.ai:
       api-key: ${DEEPSEEK_API_KEY:}
       timeout: 120s
       options:
-        model: deepseek-v4-flash
+        model: deepseek-v4-flash-vision-exp
         extra-body:
           thinking:
             type: disabled

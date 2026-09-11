@@ -36,9 +36,10 @@ mvn clean package dockerfile:build -DskipTests
 ### Spring AI 2.0.0-M6
 
 - Uses `spring.ai.openai.*` properties with `base-url` pointing to DeepSeek (OpenAI-compatible API)
-- Model: `deepseek-v4-flash` with thinking mode explicitly disabled via `extra-body`
+- Model: `deepseek-v4-flash-vision-exp`（vision 多模态：@提及带图片附件时经 `Media`/`UserMessage.builder()` 传入，最多 3 张，历史消息不回放图片）
 - **DO NOT use `spring-ai-starter-model-deepseek`** — it has bugs: `DeepSeekChatModel.createRequest()` doesn't serialize `reasoningContent`, and `DeepSeekChatOptions` lacks a `thinking` toggle. Use `spring-ai-starter-model-openai` instead.
 - Thinking mode is disabled because Spring AI cannot pass `reasoning_content` back during internal tool-call loops, causing 400 errors
+- **Reactor 语义坑**：`Mono<Void>.subscribe(值消费者)` 永不触发（空完成只发 complete 信号），完成逻辑必须用三参 subscribe 的 onComplete
 
 ### Project Conventions
 

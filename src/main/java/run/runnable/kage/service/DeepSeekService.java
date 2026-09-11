@@ -8,6 +8,11 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.content.Media;
+import org.springframework.util.MimeType;
+import org.springframework.util.MimeTypeUtils;
+
+import java.net.URI;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.mcp.AsyncMcpToolCallback;
 import org.springframework.ai.tool.ToolCallback;
@@ -203,20 +208,28 @@ public class DeepSeekService {
      * 流式对话 - 返回增量内容的 Flux
      * @param onComplete 完成时的回调，用于保存完整响应
      */
-    public Flux<String> chatStream(String guildId, String userId, String channelId, String userMessage, 
+    public Flux<String> chatStream(String guildId, String userId, String channelId, String userMessage,
                                     java.util.function.Consumer<String> onComplete) {
+        return chatStream(guildId, userId, channelId, userMessage, List.of(), onComplete);
+    }
+
+    /**
+     * 流式对话（支持图片）- imageUrls 非空时当前消息附带图片（vision 模型识别）
+     */
+    public Flux<String> chatStream(String guildId, String userId, String channelId, String userMessage,
+                                    List<String> imageUrls, java.util.function.Consumer<String> onComplete) {
         // 响应式获取分布式锁
         return tryAcquireLock(guildId, userId)
                 .flatMapMany(acquired -> {
                     if (!acquired) {
                         return Flux.error(new UserBusyException("请等待上一个问题回复完成"));
                     }
-                    
+
                     // 设置频道上下文，供工具使用
                     channelHistoryTool.setContext(guildId, userId, channelId);
-                    
+
                     return loadChatHistory(guildId, userId)
-                            .flatMapMany(history -> callAiStream(history, userMessage, guildId, userId, userMessage, onComplete))
+                            .flatMapMany(history -> callAiStream(history, userMessage, imageUrls, guildId, userId, userMessage, onComplete))
                             .doOnError(e -> logAiError("AI 流式调用失败", e, guildId, userId, userMessage))
                             .doFinally(signal -> {
                                 releaseLock(guildId, userId);  // 释放分布式锁
@@ -243,10 +256,10 @@ public class DeepSeekService {
     /**
      * 流式调用 AI
      */
-    private Flux<String> callAiStream(List<ChatMessage> history, String userMessage,
+    private Flux<String> callAiStream(List<ChatMessage> history, String userMessage, List<String> imageUrls,
                                        String guildId, String userId, String originalMessage,
                                        java.util.function.Consumer<String> onComplete) {
-        List<Message> messages = buildMessages(history, userMessage, guildId, userId);
+        List<Message> messages = buildMessages(history, userMessage, imageUrls, guildId, userId);
         log.info("开始流式调用 AI，消息数: {}", messages.size());
         Prompt prompt = new Prompt(messages);
         StringBuilder fullContent = new StringBuilder();
@@ -325,15 +338,23 @@ public class DeepSeekService {
      * 构建 Spring AI 消息列表
      */
     private List<Message> buildMessages(List<ChatMessage> history, String userMessage) {
-        return buildMessages(history, userMessage, null, null);
+        return buildMessages(history, userMessage, List.of(), null, null);
     }
-    
+
     /**
      * 构建 Spring AI 消息列表（带上下文信息）
      */
     private List<Message> buildMessages(List<ChatMessage> history, String userMessage, String guildId, String userId) {
+        return buildMessages(history, userMessage, List.of(), guildId, userId);
+    }
+
+    /**
+     * 构建 Spring AI 消息列表；imageUrls 非空时当前消息附带图片（vision）
+     */
+    private List<Message> buildMessages(List<ChatMessage> history, String userMessage, List<String> imageUrls,
+                                        String guildId, String userId) {
         List<Message> messages = new ArrayList<>();
-        
+
         // 构建系统提示词，包含上下文信息
         String systemPrompt = getSystemPrompt();
         if (guildId != null && userId != null) {
@@ -349,8 +370,46 @@ public class DeepSeekService {
             }
         });
 
-        messages.add(new UserMessage(userMessage));
+        List<Media> media = buildMedia(imageUrls);
+        if (media.isEmpty()) {
+            messages.add(new UserMessage(userMessage));
+        } else {
+            messages.add(UserMessage.builder()
+                    .text(userMessage)
+                    .media(media)
+                    .build());
+        }
         return messages;
+    }
+
+    /**
+     * 图片 URL 转 Spring AI Media（最多 3 张，按扩展名推断 MIME）
+     */
+    private List<Media> buildMedia(List<String> imageUrls) {
+        if (imageUrls == null || imageUrls.isEmpty()) {
+            return List.of();
+        }
+        return imageUrls.stream()
+                .limit(3)
+                .map(url -> Media.builder()
+                        .mimeType(resolveImageMime(url))
+                        .data(URI.create(url))
+                        .build())
+                .toList();
+    }
+
+    private MimeType resolveImageMime(String url) {
+        String lower = url.toLowerCase();
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+            return MimeTypeUtils.IMAGE_JPEG;
+        }
+        if (lower.endsWith(".gif")) {
+            return MimeTypeUtils.IMAGE_GIF;
+        }
+        if (lower.endsWith(".webp")) {
+            return MimeTypeUtils.parseMimeType("image/webp");
+        }
+        return MimeTypeUtils.IMAGE_PNG;
     }
 
     /**

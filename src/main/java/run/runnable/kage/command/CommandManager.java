@@ -2,12 +2,14 @@ package run.runnable.kage.command;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.stereotype.Component;
 import run.runnable.kage.service.DeepSeekService;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -118,11 +120,17 @@ public class CommandManager {
         String userId = event.getAuthor().getId();
         String channelId = event.getChannel().getId();
 
+        // 提取消息中的图片附件（vision 识别）
+        List<String> imageUrls = event.getMessage().getAttachments().stream()
+                .filter(a -> a.getContentType() != null && a.getContentType().startsWith("image/"))
+                .map(Message.Attachment::getUrl)
+                .toList();
+
         // 先回复一条消息，后续流式更新
         event.getMessage().reply("🤔 思考中...").queue(replyMsg -> {
             StringBuilder contentBuilder = new StringBuilder();
-            
-            deepSeekService.chatStream(guildId, userId, channelId, message, null)
+
+            deepSeekService.chatStream(guildId, userId, channelId, message, imageUrls, null)
                     // 节流：每 500ms 更新一次，避免触发 Discord 速率限制
                     .buffer(java.time.Duration.ofMillis(500))
                     .subscribe(
