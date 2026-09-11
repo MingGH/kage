@@ -94,28 +94,28 @@ public class MessageCommandContext implements CommandContext {
 
     @Override
     public void deferReply(Consumer<ReplyHook> callback) {
-        event.getMessage().reply("🤔 思考中...").queue(msg -> {
-            callback.accept(new ReplyHook() {
-                @Override
-                public void sendMessage(String response) {
-                    msg.editMessage(response).queue();
-                }
+        event.getMessage().reply("🤔 思考中...").queue(
+                msg -> callback.accept(new ReplyHook() {
+                    @Override
+                    public void sendMessage(String response) {
+                        msg.editMessage(response).queue();
+                    }
 
-                @Override
-                public void editMessage(String response) {
-                    msg.editMessage(response).queue();
-                }
+                    @Override
+                    public void editMessage(String response) {
+                        msg.editMessage(response).queue();
+                    }
 
-                @Override
-                public void editMessageWithImage(String message, byte[] imageBytes, String fileName, Runnable onFailure) {
-                    msg.editMessage(message)
-                            .setFiles(List.of(FileUpload.fromData(imageBytes, fileName)))
-                            .queue(null, err -> {
-                                log.error("图片附件上传失败", err);
-                                if (onFailure != null) onFailure.run();
-                            });
-                }
-            });
-        });
+                    @Override
+                    public void editMessageWithImage(String message, byte[] imageBytes, String fileName, Runnable onFailure) {
+                        msg.editMessage(message)
+                                .setFiles(List.of(FileUpload.fromData(imageBytes, fileName)))
+                                .queue(null, err -> {
+                                    log.error("图片附件上传失败", err);
+                                    if (onFailure != null) onFailure.run();
+                                });
+                    }
+                }),
+                err -> log.error("发送占位消息失败", err));
     }
 }

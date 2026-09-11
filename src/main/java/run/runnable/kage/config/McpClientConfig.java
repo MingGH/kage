@@ -17,6 +17,7 @@ import java.time.Duration;
 
 /**
  * 自定义 MCP Client 配置，添加 Authorization header 支持
+ * 初始化（initialize）统一在 DeepSeekService 中按 client 容错执行，避免单服务故障阻断启动
  */
 @Slf4j
 @Configuration
@@ -25,14 +26,11 @@ public class McpClientConfig {
     @Value("${jina.api-key:}")
     private String jinaApiKey;
 
-    @Value("${jina.mcp.enabled:true}")
-    private boolean mcpEnabled;
-
     @Bean
     @Primary
     @ConditionalOnProperty(name = "jina.mcp.enabled", havingValue = "true", matchIfMissing = true)
     public McpAsyncClient jinaAsyncMcpClient() {
-        log.info("创建自定义 Jina MCP Client，API Key: {}...", 
+        log.info("创建自定义 Jina MCP Client，API Key: {}...",
                 jinaApiKey.length() > 10 ? jinaApiKey.substring(0, 10) : "未配置");
 
         // 创建带 Authorization header 的请求构建器
@@ -53,10 +51,30 @@ public class McpClientConfig {
                 .requestTimeout(Duration.ofSeconds(120))
                 .build();
 
-        // 初始化连接
-        client.initialize().block(Duration.ofSeconds(30));
-        log.info("Jina MCP Client 初始化完成");
+        log.info("Jina MCP Client 创建完成");
+        return client;
+    }
 
+    /**
+     * 996Ninja 摸鱼 MCP 服务（fish-ninja，Streamable HTTP，无鉴权）
+     */
+    @Bean
+    @ConditionalOnProperty(name = "fish-ninja.mcp.enabled", havingValue = "true", matchIfMissing = true)
+    public McpAsyncClient fishNinjaAsyncMcpClient(
+            @Value("${fish-ninja.mcp.base-url:https://fish.mcp.996.ninja}") String baseUrl,
+            @Value("${fish-ninja.mcp.endpoint:/mcp}") String endpoint) {
+        HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport.builder(baseUrl)
+                .clientBuilder(HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(30)))
+                .endpoint(endpoint)
+                .build();
+
+        McpAsyncClient client = McpClient.async(transport)
+                .clientInfo(new McpSchema.Implementation("kage-bot-fishninja", "1.0.0"))
+                .requestTimeout(Duration.ofSeconds(60))
+                .build();
+
+        log.info("FishNinja MCP Client 创建完成: {}{}", baseUrl, endpoint);
         return client;
     }
 }

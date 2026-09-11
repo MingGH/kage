@@ -59,6 +59,7 @@ public class DrawCommand implements UnifiedCommand {
         String prompt = resolvePrompt(ctx);
         String size = ctx.getString("size");
         String userId = ctx.getUser().getId();
+        log.info("/draw 收到请求: user={}, size={}", userId, size);
 
         drawRateLimiter.tryAcquire(userId).subscribe(
                 v -> ctx.deferReply(hook -> draw(hook, ctx.getUser().getName(), prompt, size)),
@@ -94,6 +95,7 @@ public class DrawCommand implements UnifiedCommand {
      * 生成图片并回填到占位消息；下载失败时降级为仅回复 URL
      */
     private void draw(ReplyHook hook, String userName, String prompt, String size) {
+        log.info("/draw 开始生成: user={}, size={}", userName, size);
         seedreamService.generateImage(prompt, size)
                 .flatMap(this::withBytes)
                 .subscribe(

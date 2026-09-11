@@ -25,7 +25,6 @@ import run.runnable.kage.service.tool.ChannelHistoryTool;
 import run.runnable.kage.service.tool.CurrentTimeTool;
 import run.runnable.kage.service.tool.LeaderboardTool;
 import run.runnable.kage.service.tool.RagSearchTool;
-import run.runnable.kage.service.tool.TarotTool;
 
 import org.springframework.beans.factory.annotation.Value;
 
@@ -57,20 +56,18 @@ public class DeepSeekService {
     private final String mcpToolsDescription;
     private final ChannelHistoryTool channelHistoryTool;
     private final CurrentTimeTool currentTimeTool;
-    private final TarotTool tarotTool;
     private final LeaderboardTool leaderboardTool;
     private final RagSearchTool ragSearchTool;
-    
+
     @Lazy
     @Autowired
     private CommandRegistry commandRegistry;
 
     public DeepSeekService(ChatClient.Builder chatClientBuilder,
                            ChatMessageRepository chatMessageRepository,
-                           @Lazy McpAsyncClient mcpAsyncClient,
+                           @Lazy List<McpAsyncClient> mcpClients,
                            ChannelHistoryTool channelHistoryTool,
                            CurrentTimeTool currentTimeTool,
-                           TarotTool tarotTool,
                            LeaderboardTool leaderboardTool,
                            RagSearchTool ragSearchTool,
                            ReactiveStringRedisTemplate redisTemplate,
@@ -79,52 +76,73 @@ public class DeepSeekService {
         this.chatMessageRepository = chatMessageRepository;
         this.channelHistoryTool = channelHistoryTool;
         this.currentTimeTool = currentTimeTool;
-        this.tarotTool = tarotTool;
         this.leaderboardTool = leaderboardTool;
         this.ragSearchTool = ragSearchTool;
         this.redisTemplate = redisTemplate;
-        
+
         List<ToolCallback> toolList = new ArrayList<>();
         StringBuilder toolDescBuilder = new StringBuilder();
-        
-        // 从自定义 MCP Client 获取工具
-        var tools = mcpAsyncClient.listTools().block();
-        if (tools != null && tools.tools() != null) {
-            var mcpTools = tools.tools().stream()
-                    .map(tool -> new AsyncMcpToolCallback(mcpAsyncClient, tool))
-                    .toList();
-            toolList.addAll(mcpTools);
-            log.info("已加载 {} 个 MCP 工具", mcpTools.size());
-            
-            // 构建 MCP 工具描述
-            for (ToolCallback tool : mcpTools) {
-                String name = tool.getToolDefinition().name();
-                String desc = tool.getToolDefinition().description();
-                // 简化工具名（去掉 k_b_ 前缀）
-                String simpleName = name.startsWith("k_b_") ? name.substring(4) : name;
-                toolDescBuilder.append("- ").append(simpleName).append(": ").append(getShortDescription(desc)).append("\n");
-                log.info("  - {}: {}", name, desc);
-            }
-        } else {
-            log.warn("未能加载 MCP 工具");
-        }
-        
+        toolList.addAll(loadMcpTools(mcpClients, toolDescBuilder));
+
         // 添加内置工具描述
         toolDescBuilder.append("- getRecentChannelMessages: 查询当前频道最近的聊天记录\n");
         toolDescBuilder.append("- getCurrentTime: 获取当前时间\n");
-        toolDescBuilder.append("- drawTarotCards: 塔罗牌占卜\n");
         toolDescBuilder.append("- getUserScore: 查询用户的摸鱼积分和排名\n");
         toolDescBuilder.append("- getLeaderboard: 查询摸鱼排行榜\n");
         toolDescBuilder.append("- ragSearch: 搜索996忍者网站知识库，获取摸鱼技巧、网站功能等相关内容\n");
-        
+
         this.mcpToolsDescription = toolDescBuilder.length() > 0 ? toolDescBuilder.toString() : "暂无可用工具";
         this.allTools = toolList.toArray(new ToolCallback[0]);
-        
+
         // 构建带工具的 ChatClient（内置工具通过 @Tool 注解自动注册）
         this.chatClient = chatClientBuilder
                 .defaultToolCallbacks(allTools)
-                .defaultTools(channelHistoryTool, currentTimeTool, tarotTool, leaderboardTool, ragSearchTool)
+                .defaultTools(channelHistoryTool, currentTimeTool, leaderboardTool, ragSearchTool)
                 .build();
+    }
+
+    /**
+     * 已加载的 MCP 工具名（内部测试接口用）
+     */
+    public List<String> getLoadedToolNames() {
+        return java.util.Arrays.stream(allTools)
+                .map(tool -> tool.getToolDefinition().name())
+                .toList();
+    }
+
+    /**
+     * 聚合所有 MCP 服务的工具；每个 client 独立初始化，单服务故障不影响其他服务和 bot 启动
+     */
+    private List<ToolCallback> loadMcpTools(List<McpAsyncClient> mcpClients, StringBuilder toolDescBuilder) {
+        List<ToolCallback> toolList = new ArrayList<>();
+        for (McpAsyncClient client : mcpClients) {
+            String serverName = client.getClientInfo() != null ? client.getClientInfo().name() : "unknown";
+            try {
+                client.initialize().block(Duration.ofSeconds(20));
+                var tools = client.listTools().block(Duration.ofSeconds(20));
+                if (tools == null || tools.tools() == null) {
+                    log.warn("MCP 服务 {} 未返回工具列表", serverName);
+                    continue;
+                }
+                var mcpTools = tools.tools().stream()
+                        .map(tool -> new AsyncMcpToolCallback(client, tool))
+                        .toList();
+                toolList.addAll(mcpTools);
+                log.info("已从 MCP 服务 {} 加载 {} 个工具", serverName, mcpTools.size());
+                for (ToolCallback tool : mcpTools) {
+                    String name = tool.getToolDefinition().name();
+                    String desc = tool.getToolDefinition().description();
+                    // 简化工具名（去掉 k_b_ 前缀）
+                    String simpleName = name.startsWith("k_b_") ? name.substring(4) : name;
+                    toolDescBuilder.append("- ").append(simpleName).append(": ")
+                            .append(getShortDescription(desc)).append("\n");
+                    log.info("  - {}: {}", name, desc);
+                }
+            } catch (Exception e) {
+                log.warn("MCP 服务 {} 不可用，跳过: {}", serverName, e.getMessage());
+            }
+        }
+        return toolList;
     }
 
     @PostConstruct

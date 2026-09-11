@@ -43,6 +43,17 @@ spring.ai:
 jina:
   api-key: ${JINA_API_KEY:}
 
+# 996Ninja 摸鱼 MCP 服务（fish-ninja）
+fish-ninja:
+  mcp:
+    enabled: true
+    base-url: https://fish.mcp.996.ninja
+    endpoint: /mcp
+
+# Pod 内部集成测试服务（仅绑 127.0.0.1，kubectl exec + curl 调用）
+internal-test:
+  enabled: ${INTERNAL_TEST_ENABLED:false}
+
 # 豆包 Seedream 图片生成 (火山方舟 Ark API)
 ark:
   api-key: ${ARK_API_KEY:}
@@ -87,7 +98,7 @@ ai:
     特别说明：
     - 当用户问"刚才聊了什么"、"总结一下讨论"、"大家在说什么"等问题时，使用 getRecentChannelMessages 工具查询频道聊天记录
     - 当需要查询实时信息（新闻、天气等）时，使用联网搜索工具
-    - 塔罗牌占卜：调用 drawTarotCards 工具后，直接根据牌名进行文字解读，不要尝试绘制或展示任何 ASCII 艺术图案
+    - 塔罗牌占卜：调用 draw_tarot 工具，把返回的牌面和解读直接转述给用户即可，不要自行编造牌名
     - 摸鱼积分系统：用户发消息会获得积分，可以用 rank 命令查看排行榜。rank day/week/month 查看不同周期排行，rank me 查看个人统计。每天积分最高的用户会获得"摸鱼忍者王"称号！
     - 当用户问关于996忍者网站的内容、摸鱼技巧、网站有什么功能、推荐摸鱼方法等问题时，使用 ragSearch 工具搜索网站知识库，基于搜索结果回答并推荐相关页面链接
     - ragSearch 返回的链接可以直接贴给用户，格式如 https://996.ninja/xxx
