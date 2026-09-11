@@ -57,6 +57,32 @@ mvn clean package dockerfile:build -DskipTests
 - **ImageController** (`/image/generate`): 临时测试接口，`@ConditionalOnProperty(ark.test-endpoint.enabled)` 默认关闭，开启需在 deployment 加 env `ARK_TEST_ENDPOINT_ENABLED=true`（仅全局限流，无用户维度）
 - **ARK_API_KEY**: K8s Secret `kage-secret` 注入，yaml 中只有 `${ARK_API_KEY:}` 占位符，禁止明文入库
 
+### MCP 集成 (Jina + fish-ninja)
+
+- **多客户端聚合**：`DeepSeekService` 注入 `List<McpAsyncClient>`（`config/McpClientConfig.java` 按服务各建一个 bean），每个 client 独立 `initialize` + `listTools`（20s 超时、try-catch 降级），**单 MCP 服务故障只 warn 跳过，不阻断 bot 启动**；新增 MCP 服务 = 加一个 bean + application.yaml 配置，无需改其他代码
+- **工具名前缀是正常行为**：Jina 与 fish-ninja（CF agents SDK）都会按 `clientInfo.name` 给工具加前缀（`kage-bot`→`k_b_`、`kage-bot-fishninja`→`k_b_f_`），代码里的 `k_b_` 剥离只影响系统提示词展示，AI 调用仍用带前缀的全名——不要"修复"这个前缀
+- **fish-ninja**：996Ninja 摸鱼 MCP 服务（塔罗/金价/假期/热榜等 9 工具），无状态 Streamable HTTP，无鉴权；本地工具与它重复时以 MCP 为准删除本地版（如 TarotTool 已删，塔罗走 MCP `draw_tarot`）
+
+### 内部测试服务（生产集成测试入口）
+
+- `config/InternalTestServer.java`：仅绑定 `127.0.0.1:8081`（集群外不可达），由 env `INTERNAL_TEST_ENABLED=true` 开启，**用 `kubectl exec <pod> -- curl http://127.0.0.1:8081/...` 调用**——这是不开 Discord 就能做生产集成测试的入口，测试 AI/工具/画图链路优先走它
+- `GET /internal/tools`：已加载的 MCP 工具清单（验证 MCP 连接）
+- `POST /internal/chat`：`{"guildId","userId","message"}`，走完整 AI + 工具链路（验证工具真实调用）
+- `POST /internal/draw`：`{"userId","prompt","size"}`，限流→生成→下载全链路（验证画图，不含 Discord 回复段）
+- **坑：不要用 SmartLifecycle + `@EventListener(ApplicationReadyEvent)` 双重触发**——本服务曾因 `start()` 既是接口实现又是事件监听导致同 JVM bind 两次、`Address already in use` 崩溃循环；事件监听 + `@PreDestroy` 清理即可
+
+### JDA 响应模式的坑（防静默失败）
+
+- **交互占位回复统一用 `event.getHook()`**，不要直接用 `deferReply().queue(hook -> hook.sendMessage(...))` 的回调参数（该模式曾导致 /draw 全链路静默卡死：无占位消息、无日志、无超时）
+- **所有 JDA `queue()` 必须挂显式失败回调**（`queue(success, err -> log.error(...))`），JDA 默认失败日志不可依赖；"命令执行了但 Discord/日志毫无动静"优先怀疑静默失败
+- 排查静默卡死的思路：用下游副作用（如 Redis 计数 key 的创建时间，`TTL` 反推）确定卡点分层——限流器完成但无后续日志 = 卡在 JDA 交互层
+
+### 生产排查环境（需要用户提供）
+
+- **kubectl 集群访问**（查 Pod 日志/exec/滚动状态），Redis 与各 Secret 连接信息在 `kage-secret` 中（含 `REDIS_DATABASE`，注意 redis-cli 需 `-n <db>`，默认 db 0 会误判为空）
+- 运行时为 IBM Semeru（OpenJ9）JRE：**无 jcmd/jstack**，线程转储用 `kill -3`（或依赖日志）；镜像内有 curl，可直接 exec 调内部测试服务
+- **JDA 交互层（斜杠命令/按钮）无法用内部接口模拟**，只能请用户在 Discord 实际操作验证；其余功能均可通过内部测试服务覆盖
+
 ## Deployment
 
 - **CI/CD**: GitHub Actions (`.github/workflows/deploy.yml`) triggered on push to `main`
