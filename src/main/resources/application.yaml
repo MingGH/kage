@@ -43,6 +43,15 @@ spring.ai:
 jina:
   api-key: ${JINA_API_KEY:}
 
+# 豆包 Seedream 图片生成 (火山方舟 Ark API)
+ark:
+  api-key: ${ARK_API_KEY:}
+  base-url: https://ark.cn-beijing.volces.com
+  model: doubao-seedream-5.0-lite
+  size: 2K
+  test-endpoint:
+    enabled: ${ARK_TEST_ENDPOINT_ENABLED:false}  # /image/generate 测试接口开关，验证完即关
+
 ai:
   system-prompt: |
     你是布布，一个活泼可爱的 Discord 服务器忍者管家。

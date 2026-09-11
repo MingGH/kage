@@ -72,10 +72,22 @@ public interface CommandContext {
      */
     interface ReplyHook {
         void sendMessage(String message);
-        
+
         /**
          * 编辑已发送的消息（用于流式更新）
          */
         void editMessage(String message);
+
+        /**
+         * 编辑消息并附带图片（图片字节作为附件上传到频道）
+         */
+        void editMessageWithImage(String message, byte[] imageBytes, String fileName, Runnable onFailure);
+
+        /**
+         * 同上，无失败回调的便捷重载
+         */
+        default void editMessageWithImage(String message, byte[] imageBytes, String fileName) {
+            editMessageWithImage(message, imageBytes, fileName, null);
+        }
     }
 }

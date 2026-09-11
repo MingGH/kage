@@ -1,17 +1,21 @@
 package run.runnable.kage.command;
 
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.utils.FileUpload;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
  * 传统消息命令的上下文实现
  */
+@Slf4j
 public class MessageCommandContext implements CommandContext {
 
     private final MessageReceivedEvent event;
@@ -96,10 +100,20 @@ public class MessageCommandContext implements CommandContext {
                 public void sendMessage(String response) {
                     msg.editMessage(response).queue();
                 }
-                
+
                 @Override
                 public void editMessage(String response) {
                     msg.editMessage(response).queue();
+                }
+
+                @Override
+                public void editMessageWithImage(String message, byte[] imageBytes, String fileName, Runnable onFailure) {
+                    msg.editMessage(message)
+                            .setFiles(List.of(FileUpload.fromData(imageBytes, fileName)))
+                            .queue(null, err -> {
+                                log.error("图片附件上传失败", err);
+                                if (onFailure != null) onFailure.run();
+                            });
                 }
             });
         });

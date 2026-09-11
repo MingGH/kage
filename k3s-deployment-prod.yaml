@@ -76,6 +76,14 @@ spec:
                 secretKeyRef:
                   name: kage-secret
                   key: JINA_API_KEY
+            - name: ARK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: kage-secret
+                  key: ARK_API_KEY
+            # 临时：图片生成测试接口开关，线上验证通过后删除此行
+            - name: ARK_TEST_ENDPOINT_ENABLED
+              value: "true"
           readinessProbe:
             httpGet:
               path: /hl/check
