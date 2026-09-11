@@ -73,6 +73,7 @@ mvn clean package dockerfile:build -DskipTests
 
 ### JDA 响应模式的坑（防静默失败）
 
+- **Reactor 语义坑（/draw 静默卡死的真根因）**：`Mono<Void>.subscribe(valueConsumer, errorConsumer)` 的 **valueConsumer 永远不会被调用**（空完成只触发 complete 信号）——完成后的逻辑必须用三参 `subscribe(null, onError, onComplete)` 的第三参接收。诊断特征：订阅副作用（如 Redis INCR）全部执行、成功回调却一次不跑
 - **交互占位回复统一用 `event.getHook()`**，不要直接用 `deferReply().queue(hook -> hook.sendMessage(...))` 的回调参数（该模式曾导致 /draw 全链路静默卡死：无占位消息、无日志、无超时）
 - **所有 JDA `queue()` 必须挂显式失败回调**（`queue(success, err -> log.error(...))`），JDA 默认失败日志不可依赖；"命令执行了但 Discord/日志毫无动静"优先怀疑静默失败
 - 排查静默卡死的思路：用下游副作用（如 Redis 计数 key 的创建时间，`TTL` 反推）确定卡点分层——限流器完成但无后续日志 = 卡在 JDA 交互层
@@ -80,7 +81,7 @@ mvn clean package dockerfile:build -DskipTests
 ### 生产排查环境（需要用户提供）
 
 - **kubectl 集群访问**（查 Pod 日志/exec/滚动状态），Redis 与各 Secret 连接信息在 `kage-secret` 中（含 `REDIS_DATABASE`，注意 redis-cli 需 `-n <db>`，默认 db 0 会误判为空）
-- 运行时为 IBM Semeru（OpenJ9）JRE：**无 jcmd/jstack**，线程转储用 `kill -3`（或依赖日志）；镜像内有 curl，可直接 exec 调内部测试服务
+- 运行时为 Azul Zulu（HotSpot）JDK 25：排查线程问题用 `kubectl exec <pod> -- jcmd 1 Thread.print`（已从 OpenJ9 换到 Zulu，OpenJ9 无 jcmd/jstack 曾导致只能 kill -3）；镜像内有 curl，可直接 exec 调内部测试服务
 - **JDA 交互层（斜杠命令/按钮）无法用内部接口模拟**，只能请用户在 Discord 实际操作验证；其余功能均可通过内部测试服务覆盖
 
 ## Deployment

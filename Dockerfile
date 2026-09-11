@@ -1,4 +1,4 @@
-FROM ibm-semeru-runtimes:open-25-jre
+FROM azul/zulu-openjdk:25
 
 ARG JAR_NAME
 ENV PROJECT_NAME ${JAR_NAME}

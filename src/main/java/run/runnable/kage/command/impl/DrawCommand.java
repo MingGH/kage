@@ -66,19 +66,21 @@ public class DrawCommand implements UnifiedCommand {
         String userId = ctx.getUser().getId();
         log.info("/draw 收到请求: user={}, size={}", userId, size);
 
-        // 先同步 ack 交互（与 AskCommand 同款模式），Reactor 链切到 boundedElastic 执行
+        // 先同步 ack 交互；限流链在 boundedElastic 执行
+        // 注意：tryAcquire 是 Mono<Void>，完成信号必须用 subscribe 的 completion 回调接收
         ctx.deferReply(hook ->
                 drawRateLimiter.tryAcquire(userId)
                         .subscribeOn(Schedulers.boundedElastic())
                         .subscribe(
-                                v -> {
-                                    log.info("/draw 限流通过: user={}", userId);
-                                    draw(hook, ctx.getUser().getName(), prompt, size);
-                                },
+                                null,
                                 err -> {
                                     String msg = err.getMessage() != null ? err.getMessage() : err.getClass().getSimpleName();
                                     log.info("/draw 限流拒绝: user={}, {}", userId, msg);
                                     hook.editMessage("🎨 " + msg);
+                                },
+                                () -> {
+                                    log.info("/draw 限流通过: user={}", userId);
+                                    draw(hook, ctx.getUser().getName(), prompt, size);
                                 }),
                 // 交互确认失败（如 connections 挂死超时）→ 降级为普通频道消息发送
                 err -> fallbackToChannelMessage(ctx, ctx.getUser().getName(), prompt, size, userId));
@@ -164,9 +166,12 @@ public class DrawCommand implements UnifiedCommand {
     private void fallbackToChannelMessage(CommandContext ctx, String userName, String prompt, String size, String userId) {
         log.warn("/draw 交互确认失败，降级为频道消息模式: user={}", userId);
         ctx.getChannel().sendMessage("🎨 **" + userName + "** 的画作生成中...").queue(
-                msg -> drawRateLimiter.tryAcquire(userId).subscribe(
-                        v -> draw(replyHookOf(msg), userName, prompt, size),
-                        err -> msg.editMessage("🎨 " + messageOf(err)).queue()),
+                msg -> drawRateLimiter.tryAcquire(userId)
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .subscribe(
+                                null,
+                                err -> msg.editMessage("🎨 " + messageOf(err)).queue(),
+                                () -> draw(replyHookOf(msg), userName, prompt, size)),
                 err -> log.error("/draw 降级消息发送失败", err));
     }
 
