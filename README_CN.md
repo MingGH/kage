@@ -38,6 +38,9 @@
 
 ## 🆕 最近更新
 
+- **AI 画图 `/draw`** - 豆包 Seedream 生成 2K 图片直接回复到频道，配额限流（全局 100 张/天、每人 30 张/天）
+- **fish-ninja MCP** - 集成 996Ninja 摸鱼 MCP 服务：塔罗占卜、实时金价、假期倒计时、知乎热榜、摸鱼日报等 9 个工具
+- **JDK 25** - 升级到 JDK 25 LTS（Azul Zulu）
 - **Spring Boot 4.0 + Spring AI 2.0** - 升级到 Spring Boot 4.0.6 和 Spring AI 2.0.0-M6，原生支持 DeepSeek
 - **DeepSeek V4 Flash** - 使用 deepseek-chat 模型（deepseek-v4-flash 非思考模式）
 - **流式 AI 回复** - AI 回复实时显示，带输入中提示，单用户请求队列防止冲突
@@ -53,6 +56,8 @@
 
 - 🤖 **AI 对话** - 集成 DeepSeek API，支持多轮对话上下文
 - 🌐 **联网搜索** - 通过 MCP (Model Context Protocol) 集成 Jina AI，支持网页搜索和内容读取
+- 🎨 **AI 画图** - `/draw` 调用豆包 Seedream 生成 2K 图片，图片直接回复到频道，支持每日配额限流
+- 🐟 **摸鱼工具集** - 通过 MCP 集成 fish-ninja：塔罗占卜、实时金价、假期倒计时、知乎热榜、今天吃什么、摸鱼日报等
 - 🎰 **抽奖系统** - 发起抽奖、用户参与、自动开奖
 - 📊 **投票系统** - 创建投票、多选项支持、支持多选和匿名投票
 - ⏰ **下班倒计时** - 设置下班时间，定时提醒摸鱼进度
@@ -76,6 +81,7 @@
 | `/countdown-cancel` | 取消下班倒计时 |
 | `/remind <时间> <内容>` | 设置定时提醒（如 `/remind 30m 喝水`） |
 | `/fortune` | 查看今日运势和摸鱼指数 |
+| `/draw <画面描述> [尺寸]` | AI 画图（豆包 Seedream，可选 1K/2K，每日限流） |
 | `/play <url>` | 播放音乐 |
 | `/stop` | 停止播放并离开语音频道 |
 | `/skip` | 跳过当前歌曲 |
@@ -104,7 +110,7 @@
 
 ## 技术栈
 
-- Java 17+
+- Java 25
 - Spring Boot 4.0.x (WebFlux)
 - Spring AI 2.0.0-M6
 - JDA 5.x (Java Discord API)

@@ -38,6 +38,9 @@ I wanted to build a Chinese Discord bot that I could actually use. Mee6 is way t
 
 ## 🆕 Recent Updates
 
+- **AI Image Generation `/draw`** - Generate 2K images with Doubao Seedream, delivered directly to the channel, with daily quota limits (100/day global, 30/day per user)
+- **fish-ninja MCP** - Integrated 996Ninja slacking MCP service: tarot reading, live gold price, holiday countdown, Zhihu hot list, daily slacking report, and more (9 tools)
+- **JDK 25** - Upgraded to JDK 25 LTS (Azul Zulu)
 - **Spring Boot 4.0 + Spring AI 2.0** - Upgraded to Spring Boot 4.0.6 and Spring AI 2.0.0-M6 with native DeepSeek support
 - **DeepSeek V4 Flash** - Using deepseek-chat model (deepseek-v4-flash non-thinking mode)
 - **Streaming AI Responses** - AI replies appear in real-time with typing indicator, per-user request queuing prevents conflicts
@@ -53,6 +56,8 @@ PRs are welcome! Feel free to contribute new features, bug fixes, or improvement
 
 - 🤖 **AI Chat** - Powered by DeepSeek API with multi-turn conversation support
 - 🌐 **Web Search** - Integrated with Jina AI via MCP (Model Context Protocol) for real-time web search and content reading
+- 🎨 **AI Image Generation** - `/draw` generates 2K images with Doubao Seedream, delivered as attachments in the channel, with daily quota limits
+- 🐟 **Slacking Toolbox** - fish-ninja MCP integration: tarot reading, live gold price, holiday countdown, Zhihu hot list, what-to-eat, daily slacking report, and more
 - 🎰 **Lottery System** - Create lotteries, user participation, automatic drawing
 - 📊 **Poll System** - Create polls with multiple options, supports multiple choice & anonymous voting
 - ⏰ **Off-work Countdown** - Set countdown timer with periodic reminders
@@ -76,6 +81,7 @@ PRs are welcome! Feel free to contribute new features, bug fixes, or improvement
 | `/countdown-cancel` | Cancel off-work countdown |
 | `/remind <time> <message>` | Set a reminder (e.g. `/remind 30m drink water`) |
 | `/fortune` | Check today's fortune and slacking index |
+| `/draw <prompt> [size]` | AI image generation (Doubao Seedream, optional 1K/2K, daily quota) |
 | `/play <url>` | Play music |
 | `/stop` | Stop playing and leave voice channel |
 | `/skip` | Skip current track |
@@ -104,7 +110,7 @@ Simply @BuBu to chat with AI, with support for real-time web search.
 
 ## Tech Stack
 
-- Java 17+
+- Java 25
 - Spring Boot 4.0.x (WebFlux)
 - Spring AI 2.0.0-M6
 - JDA 5.x (Java Discord API)
