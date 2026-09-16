@@ -34,6 +34,8 @@ import run.runnable.kage.service.tool.RagSearchTool;
 import org.springframework.beans.factory.annotation.Value;
 
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.time.Duration;
@@ -52,7 +54,10 @@ public class DeepSeekService {
     private static final int MAX_HISTORY_SIZE = 20;
     private static final String PROCESSING_KEY_PREFIX = "kage:processing:";
     private static final Duration PROCESSING_LOCK_TTL = Duration.ofMinutes(5);
-    
+    // 下载 Discord 附件图片用于识图（Discord CDN 要求带 User-Agent，否则 403/400）
+    private static final Duration IMAGE_DOWNLOAD_TIMEOUT = Duration.ofSeconds(30);
+    private static final String IMAGE_USER_AGENT = "Mozilla/5.0 (compatible; KageBot/1.0)";
+
     private final ReactiveStringRedisTemplate redisTemplate;
     private final ChatClient chatClient;
     private final ChatMessageRepository chatMessageRepository;
@@ -63,6 +68,7 @@ public class DeepSeekService {
     private final CurrentTimeTool currentTimeTool;
     private final LeaderboardTool leaderboardTool;
     private final RagSearchTool ragSearchTool;
+    private final WebClient imageWebClient;
 
     @Lazy
     @Autowired
@@ -76,6 +82,7 @@ public class DeepSeekService {
                            LeaderboardTool leaderboardTool,
                            RagSearchTool ragSearchTool,
                            ReactiveStringRedisTemplate redisTemplate,
+                           WebClient.Builder webClientBuilder,
                            @Value("${ai.system-prompt}") String systemPromptTemplate) {
         this.systemPromptTemplate = systemPromptTemplate;
         this.chatMessageRepository = chatMessageRepository;
@@ -84,6 +91,7 @@ public class DeepSeekService {
         this.leaderboardTool = leaderboardTool;
         this.ragSearchTool = ragSearchTool;
         this.redisTemplate = redisTemplate;
+        this.imageWebClient = webClientBuilder.build();
 
         List<ToolCallback> toolList = new ArrayList<>();
         StringBuilder toolDescBuilder = new StringBuilder();
@@ -259,30 +267,33 @@ public class DeepSeekService {
     private Flux<String> callAiStream(List<ChatMessage> history, String userMessage, List<String> imageUrls,
                                        String guildId, String userId, String originalMessage,
                                        java.util.function.Consumer<String> onComplete) {
-        List<Message> messages = buildMessages(history, userMessage, imageUrls, guildId, userId);
-        log.info("开始流式调用 AI，消息数: {}", messages.size());
-        Prompt prompt = new Prompt(messages);
-        StringBuilder fullContent = new StringBuilder();
-        
-        return chatClient.prompt(prompt)
-                .stream()
-                .chatResponse()
-                .filter(resp -> resp != null && resp.getResult() != null)
-                .flatMap(resp -> {
-                    String text = resp.getResult().getOutput().getText();
-                    if (text != null && !text.isEmpty()) {
-                        fullContent.append(text);
-                        return Flux.just(text);
-                    }
-                    return Flux.empty();
-                })
-                .doOnComplete(() -> {
-                    String content = fullContent.toString();
-                    log.info("AI 流式响应完成，内容长度: {}", content.length());
-                    saveChatHistory(guildId, userId, originalMessage, content, null);
-                    if (onComplete != null) {
-                        onComplete.accept(content);
-                    }
+        return buildMedia(imageUrls)
+                .flatMapMany(media -> {
+                    List<Message> messages = buildMessages(history, userMessage, media, guildId, userId);
+                    log.info("开始流式调用 AI，消息数: {}, 图片数: {}", messages.size(), media.size());
+                    Prompt prompt = new Prompt(messages);
+                    StringBuilder fullContent = new StringBuilder();
+
+                    return chatClient.prompt(prompt)
+                            .stream()
+                            .chatResponse()
+                            .filter(resp -> resp != null && resp.getResult() != null)
+                            .flatMap(resp -> {
+                                String text = resp.getResult().getOutput().getText();
+                                if (text != null && !text.isEmpty()) {
+                                    fullContent.append(text);
+                                    return Flux.just(text);
+                                }
+                                return Flux.empty();
+                            })
+                            .doOnComplete(() -> {
+                                String content = fullContent.toString();
+                                log.info("AI 流式响应完成，内容长度: {}", content.length());
+                                saveChatHistory(guildId, userId, originalMessage, content, null);
+                                if (onComplete != null) {
+                                    onComplete.accept(content);
+                                }
+                            });
                 })
                 .subscribeOn(Schedulers.boundedElastic());
     }
@@ -349,9 +360,9 @@ public class DeepSeekService {
     }
 
     /**
-     * 构建 Spring AI 消息列表；imageUrls 非空时当前消息附带图片（vision）
+     * 构建 Spring AI 消息列表；media 非空时当前消息附带图片（vision）
      */
-    private List<Message> buildMessages(List<ChatMessage> history, String userMessage, List<String> imageUrls,
+    private List<Message> buildMessages(List<ChatMessage> history, String userMessage, List<Media> media,
                                         String guildId, String userId) {
         List<Message> messages = new ArrayList<>();
 
@@ -370,8 +381,7 @@ public class DeepSeekService {
             }
         });
 
-        List<Media> media = buildMedia(imageUrls);
-        if (media.isEmpty()) {
+        if (media == null || media.isEmpty()) {
             messages.add(new UserMessage(userMessage));
         } else {
             messages.add(UserMessage.builder()
@@ -383,23 +393,49 @@ public class DeepSeekService {
     }
 
     /**
-     * 图片 URL 转 Spring AI Media（最多 3 张，按扩展名推断 MIME）
+     * 下载图片 URL 并转 Spring AI Media（最多 3 张，base64 内联）。
+     * <p>
+     * DeepSeek 服务器无法直接拉取 Discord CDN（缺 User-Agent / 鉴权失败，报
+     * "Failed to download image from https://cdn.discordapp.com/..."），因此由本服务先把图片
+     * 下载成字节，再以 base64 data URL 传给模型，绕开服务端下载。
      */
-    private List<Media> buildMedia(List<String> imageUrls) {
+    private Mono<List<Media>> buildMedia(List<String> imageUrls) {
         if (imageUrls == null || imageUrls.isEmpty()) {
-            return List.of();
+            return Mono.just(List.of());
         }
-        return imageUrls.stream()
-                .limit(3)
-                .map(url -> Media.builder()
+        return Flux.fromIterable(imageUrls)
+                .take(3)
+                .concatMap(url -> downloadImage(url)
+                        .onErrorResume(e -> {
+                            log.warn("图片下载失败，跳过该图: url={}, error={}", url, e.getMessage());
+                            return Mono.empty();
+                        }))
+                .collectList();
+    }
+
+    /**
+     * 下载单张图片为字节
+     */
+    private Mono<Media> downloadImage(String url) {
+        return imageWebClient.get()
+                .uri(URI.create(url))
+                .header(HttpHeaders.USER_AGENT, IMAGE_USER_AGENT)
+                .retrieve()
+                .bodyToMono(byte[].class)
+                .timeout(IMAGE_DOWNLOAD_TIMEOUT)
+                .map(bytes -> Media.builder()
                         .mimeType(resolveImageMime(url))
-                        .data(URI.create(url))
-                        .build())
-                .toList();
+                        .data(bytes)
+                        .build());
     }
 
     private MimeType resolveImageMime(String url) {
         String lower = url.toLowerCase();
+        // Discord CDN URL 带签名 query（?ex=&is=&hm=），先剥掉再判断扩展名
+        int q = lower.indexOf('?');
+        if (q >= 0) {
+            lower = lower.substring(0, q);
+        }
         if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
             return MimeTypeUtils.IMAGE_JPEG;
         }
