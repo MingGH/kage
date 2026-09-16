@@ -86,6 +86,30 @@ public class CommandManager {
     }
 
     /**
+     * 提取消息中的图片附件 URL（含引用消息里的图片）
+     */
+    private List<String> extractImageUrls(Message message) {
+        List<String> urls = new java.util.ArrayList<>();
+        collectAttachmentImages(message, urls);
+
+        // 引用消息里的图片也一并识别
+        Message referenced = message.getReferencedMessage();
+        if (referenced != null) {
+            collectAttachmentImages(referenced, urls);
+        }
+        return urls;
+    }
+
+    private void collectAttachmentImages(Message message, List<String> urls) {
+        for (Message.Attachment attachment : message.getAttachments()) {
+            String contentType = attachment.getContentType();
+            if (contentType != null && contentType.startsWith("image/")) {
+                urls.add(attachment.getUrl());
+            }
+        }
+    }
+
+    /**
      * 构建包含引用消息的完整内容
      */
     private String buildMessageWithQuote(MessageReceivedEvent event, String userMessage) {
@@ -120,11 +144,8 @@ public class CommandManager {
         String userId = event.getAuthor().getId();
         String channelId = event.getChannel().getId();
 
-        // 提取消息中的图片附件（vision 识别）
-        List<String> imageUrls = event.getMessage().getAttachments().stream()
-                .filter(a -> a.getContentType() != null && a.getContentType().startsWith("image/"))
-                .map(Message.Attachment::getUrl)
-                .toList();
+        // 提取消息中的图片附件（vision 识别），含引用消息里的图片
+        List<String> imageUrls = extractImageUrls(event.getMessage());
 
         // 先回复一条消息，后续流式更新
         event.getMessage().reply("🤔 思考中...").queue(replyMsg -> {
