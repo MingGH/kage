@@ -59,7 +59,8 @@ public class DeepSeekService {
     private static final Duration IMAGE_DOWNLOAD_TIMEOUT = Duration.ofSeconds(30);
     private static final String IMAGE_USER_AGENT = "Mozilla/5.0 (compatible; KageBot/1.0)";
     private static final ZoneId DISPLAY_ZONE = ZoneId.of("Asia/Shanghai");
-    private static final DateTimeFormatter HISTORY_TIME_FORMATTER = DateTimeFormatter.ofPattern("[M月d日 HH:mm]", Locale.CHINESE);
+    private static final DateTimeFormatter HISTORY_TIME_FORMATTER = DateTimeFormatter.ofPattern("[yyyy年M月d日 HH:mm]", Locale.CHINESE);
+    private static final DateTimeFormatter CURRENT_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy年M月d日 EEEE HH:mm", Locale.CHINESE);
 
     private final ReactiveStringRedisTemplate redisTemplate;
     private final ChatClient chatClient;
@@ -394,6 +395,8 @@ public class DeepSeekService {
         if (guildId != null && userId != null) {
             systemPrompt += "\n\n当前上下文信息（调用工具时使用）：\n- guildId: " + guildId + "\n- userId: " + userId;
         }
+        systemPrompt += "\n\n当前时间（Asia/Shanghai）：" + LocalDateTime.now(DISPLAY_ZONE).format(CURRENT_TIME_FORMATTER)
+                + "。历史消息可能跨越多天甚至跨年，历史中出现的日期/时间（包括你自己之前说的）仅代表当时，判断现在以这里的时间为准；涉及时效性问题先调用 getCurrentTime 或联网搜索核实。";
         messages.add(new SystemMessage(systemPrompt));
 
         history.forEach(msg -> {
