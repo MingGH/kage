@@ -19,7 +19,7 @@ public class CurrentTimeTool {
 
     private static final String DEFAULT_TIMEZONE = "Asia/Shanghai";
 
-    @Tool(description = "获取当前时间。当用户询问'现在几点'、'今天是几号'、'现在是什么时间'等问题时使用此工具。")
+    @Tool(description = "获取当前时间。回答任何涉及日期、时间、倒计时的问题前先调用此工具，如'现在几点'、'今天几号'、'还有几天放假'、'下周三是几号'等。")
     public String getCurrentTime(
             @ToolParam(description = "时区，默认 Asia/Shanghai，可选值如 UTC、America/New_York 等") String timezone
     ) {

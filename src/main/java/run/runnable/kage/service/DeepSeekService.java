@@ -57,6 +57,8 @@ public class DeepSeekService {
     // 下载 Discord 附件图片用于识图（Discord CDN 要求带 User-Agent，否则 403/400）
     private static final Duration IMAGE_DOWNLOAD_TIMEOUT = Duration.ofSeconds(30);
     private static final String IMAGE_USER_AGENT = "Mozilla/5.0 (compatible; KageBot/1.0)";
+    private static final ZoneId DISPLAY_ZONE = ZoneId.of("Asia/Shanghai");
+    private static final DateTimeFormatter HISTORY_TIME_FORMATTER = DateTimeFormatter.ofPattern("[M月d日 HH:mm]", Locale.CHINESE);
 
     private final ReactiveStringRedisTemplate redisTemplate;
     private final ChatClient chatClient;
@@ -99,7 +101,7 @@ public class DeepSeekService {
 
         // 添加内置工具描述
         toolDescBuilder.append("- getRecentChannelMessages: 查询当前频道最近的聊天记录\n");
-        toolDescBuilder.append("- getCurrentTime: 获取当前时间\n");
+        toolDescBuilder.append("- getCurrentTime: 获取当前时间（回答任何涉及日期、时间、倒计时的问题前先调用）\n");
         toolDescBuilder.append("- getUserScore: 查询用户的摸鱼积分和排名\n");
         toolDescBuilder.append("- getLeaderboard: 查询摸鱼排行榜\n");
         toolDescBuilder.append("- ragSearch: 搜索996忍者网站知识库，获取摸鱼技巧、网站功能等相关内容\n");
@@ -374,10 +376,11 @@ public class DeepSeekService {
         messages.add(new SystemMessage(systemPrompt));
 
         history.forEach(msg -> {
+            String content = withHistoryTimestamp(msg);
             if ("user".equals(msg.getRole())) {
-                messages.add(new UserMessage(msg.getContent()));
+                messages.add(new UserMessage(content));
             } else if ("assistant".equals(msg.getRole())) {
-                messages.add(new AssistantMessage(msg.getContent()));
+                messages.add(new AssistantMessage(content));
             }
         });
 
@@ -390,6 +393,18 @@ public class DeepSeekService {
                     .build());
         }
         return messages;
+    }
+
+    /**
+     * 历史消息加时间前缀，让旧日期自带上下文（避免跨天后历史里的日期被当成当前时间）
+     */
+    private String withHistoryTimestamp(ChatMessage msg) {
+        if (msg.getCreatedAt() == null) {
+            return msg.getContent();
+        }
+        return msg.getCreatedAt().atZone(ZoneId.systemDefault())
+                .withZoneSameInstant(DISPLAY_ZONE)
+                .format(HISTORY_TIME_FORMATTER) + " " + msg.getContent();
     }
 
     /**
