@@ -11,6 +11,7 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.content.Media;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
+import tools.jackson.core.JacksonException;
 
 import java.net.URI;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -276,26 +277,31 @@ public class DeepSeekService {
                     Prompt prompt = new Prompt(messages);
                     StringBuilder fullContent = new StringBuilder();
 
-                    return chatClient.prompt(prompt)
-                            .stream()
-                            .chatResponse()
-                            .filter(resp -> resp != null && resp.getResult() != null)
-                            .flatMap(resp -> {
-                                String text = resp.getResult().getOutput().getText();
-                                if (text != null && !text.isEmpty()) {
-                                    fullContent.append(text);
-                                    return Flux.just(text);
-                                }
-                                return Flux.empty();
-                            })
-                            .doOnComplete(() -> {
-                                String content = fullContent.toString();
-                                log.info("AI 流式响应完成，内容长度: {}", content.length());
-                                saveChatHistory(guildId, userId, originalMessage, content, null);
-                                if (onComplete != null) {
-                                    onComplete.accept(content);
-                                }
-                            });
+                return chatClient.prompt(prompt)
+                        .stream()
+                        .chatResponse()
+                        .filter(resp -> resp != null && resp.getResult() != null)
+                        .flatMap(resp -> {
+                            String text = resp.getResult().getOutput().getText();
+                            if (text != null && !text.isEmpty()) {
+                                fullContent.append(text);
+                                return Flux.just(text);
+                            }
+                            return Flux.empty();
+                        })
+                        .doOnComplete(() -> {
+                            String content = fullContent.toString();
+                            log.info("AI 流式响应完成，内容长度: {}", content.length());
+                            saveChatHistory(guildId, userId, originalMessage, content, null);
+                            if (onComplete != null) {
+                                onComplete.accept(content);
+                            }
+                        })
+                        .retryWhen(Retry.backoff(3, Duration.ofMillis(500))
+                                .maxBackoff(Duration.ofSeconds(2))
+                                .filter(e -> fullContent.length() == 0)
+                                .doBeforeRetry(signal -> log.warn("AI 流式调用失败（尚未输出内容），第 {} 次重试: {}",
+                                        signal.totalRetries() + 1, signal.failure().getMessage())));
                 })
                 .subscribeOn(Schedulers.boundedElastic());
     }
@@ -339,12 +345,27 @@ public class DeepSeekService {
      */
     private boolean isRetryableException(Throwable e) {
         String message = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
-        return message.contains("timeout") 
-                || message.contains("connection") 
+        return message.contains("timeout")
+                || message.contains("connection")
                 || message.contains("reset")
                 || message.contains("refused")
                 || e instanceof java.net.SocketTimeoutException
-                || e instanceof java.io.IOException;
+                || e instanceof java.io.IOException
+                || findJacksonException(e) != null;
+    }
+
+    /**
+     * 在异常链里查找 Jackson 解析异常（模型偶发吐出非法 JSON 的工具调用参数，重试即可恢复）
+     */
+    private JacksonException findJacksonException(Throwable e) {
+        Throwable cur = e;
+        for (int i = 0; cur != null && i < 10; i++) {
+            if (cur instanceof JacksonException je) {
+                return je;
+            }
+            cur = cur.getCause();
+        }
+        return null;
     }
 
     /**
