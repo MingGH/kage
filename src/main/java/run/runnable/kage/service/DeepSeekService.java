@@ -278,25 +278,28 @@ public class DeepSeekService {
                     Prompt prompt = new Prompt(messages);
                     StringBuilder fullContent = new StringBuilder();
 
-                return chatClient.prompt(prompt)
-                        .stream()
-                        .chatResponse()
-                        .filter(resp -> resp != null && resp.getResult() != null)
-                        .flatMap(resp -> {
-                            String text = resp.getResult().getOutput().getText();
-                            if (text != null && !text.isEmpty()) {
-                                fullContent.append(text);
-                                return Flux.just(text);
-                            }
-                            return Flux.empty();
-                        })
-                        .doOnComplete(() -> {
-                            String content = fullContent.toString();
-                            log.info("AI 流式响应完成，内容长度: {}", content.length());
-                            saveChatHistory(guildId, userId, originalMessage, content, null);
-                            if (onComplete != null) {
-                                onComplete.accept(content);
-                            }
+                return Flux.defer(() -> {
+                            fullContent.setLength(0);
+                            return chatClient.prompt(prompt)
+                                    .stream()
+                                    .chatResponse()
+                                    .filter(resp -> resp != null && resp.getResult() != null)
+                                    .flatMap(resp -> {
+                                        String text = resp.getResult().getOutput().getText();
+                                        if (text != null && !text.isEmpty()) {
+                                            fullContent.append(text);
+                                            return Flux.just(text);
+                                        }
+                                        return Flux.empty();
+                                    })
+                                    .doOnComplete(() -> {
+                                        String content = fullContent.toString();
+                                        log.info("AI 流式响应完成，内容长度: {}", content.length());
+                                        saveChatHistory(guildId, userId, originalMessage, content, null);
+                                        if (onComplete != null) {
+                                            onComplete.accept(content);
+                                        }
+                                    });
                         })
                         .retryWhen(Retry.backoff(3, Duration.ofMillis(500))
                                 .maxBackoff(Duration.ofSeconds(2))
