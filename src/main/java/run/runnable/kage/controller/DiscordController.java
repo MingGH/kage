@@ -21,12 +21,15 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DiscordController {
 
+    // 2026-10-22: 按要求禁用所有对外 /discord HTTP 接口。
+    // 原实现仅保留代码，恢复接口时取消下面各 @GetMapping 的注释即可。
+
     private final DiscordBotService discordBotService;
     private final LeaderboardStatsService leaderboardStatsService;
 
     private static final int LEADERBOARD_LIMIT = 10;
 
-    @GetMapping("/status")
+    // @GetMapping("/status")
     public Mono<ApiResponse<Map<String, Object>>> getStatus() {
         Map<String, Object> status = new HashMap<>();
 
@@ -47,7 +50,7 @@ public class DiscordController {
      * 公开排行榜 API
      * GET /discord/leaderboard?period=day|week|month
      */
-    @GetMapping("/leaderboard")
+    // @GetMapping("/leaderboard")
     public Mono<ApiResponse<List<LeaderboardEntry>>> getLeaderboard(
             @RequestParam(defaultValue = "day") String period) {
 
@@ -70,7 +73,7 @@ public class DiscordController {
      * 社区概况 API
      * GET /discord/stats
      */
-    @GetMapping("/stats")
+    // @GetMapping("/stats")
     public Mono<ApiResponse<Map<String, Object>>> getCommunityStats() {
         JDA jda = discordBotService.getJda();
         if (jda == null || !discordBotService.isReady()) {
