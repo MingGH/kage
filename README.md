@@ -7,7 +7,7 @@ A feature-rich Discord bot built with Spring Boot WebFlux, featuring AI conversa
 ## 🎯 Try It Out
 
 - **Add to your server**: [Install Kage Bot](https://discord.com/oauth2/authorize?client_id=1449365950947266670)
-- **Join our community**: [Discord Server ｜ 996Ninja 摸鱼忍者](https://discord.gg/UAC8NMsF)
+- **Join our community**: [Discord Server ｜ 996Ninja 摸鱼忍者](https://discord.gg/4s3pvdt4Zd)
 
 ## 📸 Screenshots
 

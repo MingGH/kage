@@ -138,6 +138,14 @@ discord:
       输入 `/help` 或 `@布布管家 help` 查看我能做什么 😊
   leaderboard:
     broadcast-channel: ${DISCORD_LEADERBOARD_CHANNEL:摸鱼排行榜}
+  weekly-discussion:
+    enabled: ${DISCORD_WEEKLY_DISCUSSION_ENABLED:true}
+    guild-id: ${DISCORD_WEEKLY_DISCUSSION_GUILD_ID:1235228034865430558}
+    channel-id: ${DISCORD_WEEKLY_DISCUSSION_CHANNEL_ID:1235228034865430561}
+    time-zone: ${DISCORD_WEEKLY_DISCUSSION_TIME_ZONE:Asia/Shanghai}
+    monday-cron: "${DISCORD_WEEKLY_DISCUSSION_MONDAY_CRON:0 30 9 * * MON}"
+    wednesday-cron: "${DISCORD_WEEKLY_DISCUSSION_WEDNESDAY_CRON:0 30 12 * * WED}"
+    friday-cron: "${DISCORD_WEEKLY_DISCUSSION_FRIDAY_CRON:0 30 17 * * FRI}"
 
 
 # 日志配置 (调试时可开启)
