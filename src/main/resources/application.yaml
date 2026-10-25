@@ -146,6 +146,7 @@ discord:
     monday-cron: "${DISCORD_WEEKLY_DISCUSSION_MONDAY_CRON:0 30 9 * * MON}"
     wednesday-cron: "${DISCORD_WEEKLY_DISCUSSION_WEDNESDAY_CRON:0 30 12 * * WED}"
     friday-cron: "${DISCORD_WEEKLY_DISCUSSION_FRIDAY_CRON:0 30 17 * * FRI}"
+    retry-cron: "${DISCORD_WEEKLY_DISCUSSION_RETRY_CRON:0 0,15,30,45 9-18 * * MON,WED,FRI}"
 
 
 # 日志配置 (调试时可开启)

@@ -15,6 +15,7 @@ import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
@@ -26,11 +27,10 @@ import java.time.temporal.TemporalAdjusters;
 @Component
 public class WeeklyDiscussionScheduler {
 
-    private static final ZoneId ZONE_ID = ZoneId.of("Asia/Shanghai");
     private static final DateTimeFormatter THREAD_DATE_FORMATTER =
             DateTimeFormatter.ofPattern("MM.dd");
     private static final Duration STATE_TTL = Duration.ofDays(8);
-    private static final Duration LOCK_TTL = Duration.ofMinutes(15);
+    private static final Duration LOCK_TTL = Duration.ofDays(8);
     private static final Duration REDIS_TIMEOUT = Duration.ofSeconds(5);
 
     private static final String THREAD_KEY_PREFIX = "kage:weekly-discussion:thread:";
@@ -49,8 +49,10 @@ public class WeeklyDiscussionScheduler {
             ReactiveStringRedisTemplate redisTemplate,
             @Value("${discord.weekly-discussion.enabled:true}") boolean enabled,
             @Value("${discord.weekly-discussion.guild-id:1235228034865430558}") String guildId,
-            @Value("${discord.weekly-discussion.channel-id:1235228034865430561}") String channelId) {
-        this(discordBotService, redisTemplate, enabled, guildId, channelId, Clock.system(ZONE_ID));
+            @Value("${discord.weekly-discussion.channel-id:1235228034865430561}") String channelId,
+            @Value("${discord.weekly-discussion.time-zone:Asia/Shanghai}") String timeZone) {
+        this(discordBotService, redisTemplate, enabled, guildId, channelId,
+                Clock.system(ZoneId.of(timeZone)));
     }
 
     WeeklyDiscussionScheduler(
@@ -89,6 +91,22 @@ public class WeeklyDiscussionScheduler {
         postPrompt(DayOfWeek.FRIDAY);
     }
 
+    /**
+     * 当天主任务失败后，每 15 分钟重试；成功后的长期锁会阻止重复发送。
+     */
+    @Scheduled(
+            cron = "${discord.weekly-discussion.retry-cron:0 0,15,30,45 9-18 * * MON,WED,FRI}",
+            zone = "${discord.weekly-discussion.time-zone:Asia/Shanghai}")
+    public void retryTodayPrompt() {
+        LocalDate today = LocalDate.now(clock);
+        DayOfWeek day = today.getDayOfWeek();
+        if ((day != DayOfWeek.MONDAY && day != DayOfWeek.WEDNESDAY && day != DayOfWeek.FRIDAY)
+                || LocalTime.now(clock).isBefore(promptTime(day))) {
+            return;
+        }
+        postPrompt(day);
+    }
+
     void postPrompt(DayOfWeek day) {
         if (!enabled) {
             log.debug("每周摸鱼讨论帖已禁用，跳过 {}", day);
@@ -117,20 +135,31 @@ public class WeeklyDiscussionScheduler {
         ThreadChannel existingThread = findThread(jda, channel, weekStart);
         if (existingThread == null) {
             String threadName = threadName(weekStart);
-            channel.createThreadChannel(threadName, false)
-                    .setAutoArchiveDuration(ThreadChannel.AutoArchiveDuration.TIME_1_WEEK)
+            String prompt = prompt(day, today);
+            channel.sendMessage(prompt)
                     .queue(
-                            thread -> {
-                                storeThreadId(thread.getId());
-                                sendPrompt(thread, day);
-                                log.info("已创建每周摸鱼讨论帖: {} ({})", threadName, thread.getId());
-                            },
-                            error -> log.error("创建每周摸鱼讨论帖失败: {}", threadName, error)
+                            message -> message.createThreadChannel(threadName)
+                                    .setAutoArchiveDuration(ThreadChannel.AutoArchiveDuration.TIME_3_DAYS)
+                                    .queue(
+                                            thread -> {
+                                                storeThreadId(thread.getId());
+                                                log.info("已创建每周摸鱼讨论帖: {} ({})",
+                                                        threadName, thread.getId());
+                                            },
+                                            error -> {
+                                                log.error("从父消息创建每周摸鱼讨论帖失败: {}", threadName, error);
+                                                releaseEventLock(day, weekStart);
+                                            }
+                                    ),
+                            error -> {
+                                log.error("发送每周摸鱼讨论帖入口消息失败: {}", threadName, error);
+                                releaseEventLock(day, weekStart);
+                            }
                     );
             return;
         }
 
-        sendPrompt(existingThread, day);
+        sendPrompt(existingThread, day, weekStart);
     }
 
     private ThreadChannel findThread(JDA jda, TextChannel channel, LocalDate weekStart) {
@@ -171,10 +200,9 @@ public class WeeklyDiscussionScheduler {
     }
 
     private boolean acquireEventLock(DayOfWeek day, LocalDate weekStart) {
-        String lockKey = LOCK_KEY_PREFIX + guildId + ":" + weekStart + ":" + day;
         try {
             return Boolean.TRUE.equals(redisTemplate.opsForValue()
-                    .setIfAbsent(lockKey, "1", LOCK_TTL)
+                    .setIfAbsent(eventLockKey(day, weekStart), "1", LOCK_TTL)
                     .block(REDIS_TIMEOUT));
         } catch (Exception e) {
             log.warn("获取每周摸鱼讨论帖任务锁失败，跳过本次执行", e);
@@ -182,16 +210,39 @@ public class WeeklyDiscussionScheduler {
         }
     }
 
-    private void sendPrompt(ThreadChannel thread, DayOfWeek day) {
+    private void releaseEventLock(DayOfWeek day, LocalDate weekStart) {
+        redisTemplate.delete(eventLockKey(day, weekStart)).subscribe(
+                ignored -> log.info("已释放每周摸鱼讨论帖失败任务锁: day={}", day),
+                error -> log.warn("释放每周摸鱼讨论帖任务锁失败: day={}", day, error)
+        );
+    }
+
+    private void sendPrompt(ThreadChannel thread, DayOfWeek day, LocalDate weekStart) {
         String prompt = prompt(day, LocalDate.now(clock));
         thread.sendMessage(prompt).queue(
                 message -> log.info("已发送每周摸鱼讨论帖话题: day={}, threadId={}", day, thread.getId()),
-                error -> log.error("发送每周摸鱼讨论帖话题失败: day={}, threadId={}", day, thread.getId(), error)
+                error -> {
+                    log.error("发送每周摸鱼讨论帖话题失败: day={}, threadId={}", day, thread.getId(), error);
+                    releaseEventLock(day, weekStart);
+                }
         );
     }
 
     private String threadKey() {
         return THREAD_KEY_PREFIX + guildId;
+    }
+
+    private String eventLockKey(DayOfWeek day, LocalDate weekStart) {
+        return LOCK_KEY_PREFIX + guildId + ":" + weekStart + ":" + day;
+    }
+
+    private LocalTime promptTime(DayOfWeek day) {
+        return switch (day) {
+            case MONDAY -> LocalTime.of(9, 30);
+            case WEDNESDAY -> LocalTime.of(12, 30);
+            case FRIDAY -> LocalTime.of(17, 30);
+            default -> throw new IllegalArgumentException("Unsupported discussion day: " + day);
+        };
     }
 
     static String threadName(LocalDate anyDayInWeek) {
