@@ -5,6 +5,7 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -44,6 +45,7 @@ public class WeeklyDiscussionScheduler {
     private final String channelId;
     private final Clock clock;
 
+    @Autowired
     public WeeklyDiscussionScheduler(
             DiscordBotService discordBotService,
             ReactiveStringRedisTemplate redisTemplate,
